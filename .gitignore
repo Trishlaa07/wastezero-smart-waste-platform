@@ -1,0 +1,25 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+logs
+*.log
+
+# OS files
+.DS_Store
+
+# Build folders
+dist/
+build/
+
+# Uploads
+backend/uploads/
+
+# Vite
+frontend/wastezero-frontend/node_modules/
+
+# Misc
+.cache/

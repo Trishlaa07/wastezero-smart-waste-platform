@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #134e5e, #71b280);
+  overflow-y: auto;
+}
+
+
+/* ================= THEME VARIABLES ================= */
+
+:root {
+  --bg-main:        #f3f7f6;
+  --card-bg:        #ffffff;
+  --navbar-bg:      #ffffff;
+  --sidebar-bg:     linear-gradient(180deg, #134e4a, #0f3d3a);
+  --sidebar-active: #1f7a70;
+  --text-primary:   #111827;
+  --text-secondary: #6b7280;
+  --border:         #e5e7eb;
+  --hover-bg:       #f3f4f6;
+  --search-bg:      #f5f7f9;
+  --unread-bg:      #eef8f5;
+}
+
+[data-theme="dark"] {
+  --bg-main:        #0d1f24;
+  --card-bg:        #132d35;
+  --navbar-bg:      #0f2830;
+  --sidebar-bg:     linear-gradient(180deg, #0a2420, #071a18);
+  --sidebar-active: #1D9E75;
+  --text-primary:   #e2f4ef;
+  --text-secondary: #7ecbb0;
+  --border:         #1a4a40;
+  --hover-bg:       #1a3d48;
+  --search-bg:      #1a3540;
+  --unread-bg:      #0f3530;
+}

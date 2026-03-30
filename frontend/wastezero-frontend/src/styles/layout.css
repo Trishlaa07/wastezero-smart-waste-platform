@@ -1,0 +1,42 @@
+.dashboard-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: #f3f7f6;
+}
+
+/* ================= SIDEBAR ================= */
+.sidebar {
+  width: 220px;
+  background: #134e5e;
+  color: white;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebar h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.sidebar button {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #2f7d6b;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.sidebar button:hover {
+  opacity: 0.9;
+}
+
+/* ================= MAIN CONTENT ================= */
+.dashboard-main {
+  flex: 1;
+  padding: 30px;
+}

@@ -1,0 +1,207 @@
+/* ===============================
+   PLATFORM CONTROL PAGE
+================================ */
+
+.platform-container {
+  padding: 25px;
+}
+
+
+/* ===============================
+   STATS SECTION
+================================ */
+
+.platform-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+  margin-bottom: 35px;
+}
+
+.platform-stat-card {
+  background: white;
+  padding: 22px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.platform-stat-card:hover {
+  transform: translateY(-3px);
+}
+
+.platform-stat-card h3 {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.platform-stat-card p {
+  font-size: 26px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+
+/* ===============================
+   SECTION BLOCKS
+================================ */
+
+.platform-section {
+  margin-bottom: 40px;
+}
+
+.platform-section h3 {
+  margin-bottom: 18px;
+  font-size: 20px;
+  color: #333;
+}
+
+
+/* ===============================
+   TABLE (SUSPENDED USERS)
+================================ */
+
+.platform-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+.platform-table thead {
+  background: #f5f5f5;
+}
+
+.platform-table th {
+  text-align: left;
+  padding: 14px;
+  font-size: 14px;
+  color: #555;
+}
+
+.platform-table td {
+  padding: 14px;
+  border-top: 1px solid #eee;
+  font-size: 14px;
+}
+
+.platform-table tr:hover {
+  background: #fafafa;
+}
+
+
+/* ===============================
+   POST GRID
+================================ */
+
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+
+/* ===============================
+   POST CARDS
+================================ */
+
+.platform-post-card {
+  background: white;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease;
+}
+
+.platform-post-card:hover {
+  transform: translateY(-3px);
+}
+
+.platform-post-card h4 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.platform-post-card p {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.platform-post-card span {
+  font-size: 12px;
+  color: #888;
+}
+
+.report-reason {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #d32f2f;
+}
+
+
+/* ===============================
+   BUTTONS
+================================ */
+
+.unsuspend-btn {
+  background: #2e7d32;
+  border: none;
+  color: white;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.unsuspend-btn:hover {
+  background: #1b5e20;
+}
+
+.delete-post-btn {
+  margin-top: 10px;
+  background: #e53935;
+  border: none;
+  color: white;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.delete-post-btn:hover {
+  background: #c62828;
+}
+
+
+/* ===============================
+   EMPTY STATE
+================================ */
+
+.platform-section p {
+  font-size: 14px;
+  color: #777;
+}
+
+
+/* ===============================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 768px) {
+
+  .platform-table th,
+  .platform-table td {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .platform-post-card {
+    padding: 14px;
+  }
+
+}

@@ -1,0 +1,128 @@
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-report-card {
+  background: white;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #f8fafc;
+}
+
+.stat-report-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* Card Accent Borders */
+.stat-report-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 14px 14px 0 0;
+  opacity: 0.8;
+}
+
+.stat-report-card.purple::after { background: #a855f7; }
+.stat-report-card.blue::after { background: #3b82f6; }
+.stat-report-card.green::after { background: #10b981; }
+.stat-report-card.orange::after { background: #f59e0b; }
+.stat-report-card.cyan::after { background: #06b6d4; }
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.stat-report-card:hover .icon-wrapper {
+  transform: scale(1.05);
+}
+
+.purple .icon-wrapper { background-color: #f5f3ff; color: #8b5cf6; }
+.blue .icon-wrapper { background-color: #eff6ff; color: #3b82f6; }
+.green .icon-wrapper { background-color: #ecfdf5; color: #10b981; }
+.orange .icon-wrapper { background-color: #fffbeb; color: #f59e0b; }
+.cyan .icon-wrapper { background-color: #ecfeff; color: #06b6d4; }
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.purple .download-btn { color: #8b5cf6; background: #f5f3ff; }
+.blue .download-btn { color: #3b82f6; background: #eff6ff; }
+.green .download-btn { color: #10b981; background: #f0fdf4; }
+.orange .download-btn { color: #f59e0b; background: #fffbeb; }
+.cyan .download-btn { color: #0891b2; background: #ecfeff; }
+
+.download-btn:hover {
+  filter: brightness(0.97);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.card-content h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.card-content p {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #f8fafc;
+}
+
+.footer-icon {
+  color: #94a3b8;
+}

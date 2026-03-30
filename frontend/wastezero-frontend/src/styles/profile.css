@@ -1,0 +1,256 @@
+/* ================= PAGE WRAPPER (SIDE ALIGNED) ================= */
+.profile-container {
+  width: 100%;
+  padding: 20px 40px 40px 40px;
+}
+
+/* ================= HEADER ================= */
+.profile-container h1 {
+  margin-top: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 28px;
+}
+
+/* ================= TABS ================= */
+.tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 0; /* pull tabs closer to box */
+}
+
+.tabs button {
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #f3f4f6;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tabs button:hover {
+  background: #e5e7eb;
+}
+
+.active-tab {
+  background: #2f7d6b !important;
+  color: white;
+  box-shadow: 0 4px 10px rgba(47, 125, 107, 0.25);
+}
+
+/* ================= CARD ================= */
+.profile-box {
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.04),
+    0 10px 25px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  margin-top: 8px; /* slightly closer to tabs */
+}
+
+/* ================= CONNECTED SECTION HEADER ================= */
+.profile-box-header {
+  background: #2f7d6b;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 16px 16px 0 0;
+  font-weight: 600;
+  font-size: 16px;
+  margin: -32px -32px 20px -32px; /* overlaps edges of card */
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.05);
+}
+
+/* ================= GRID ================= */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.full-width {
+  grid-column: span 2;
+}
+
+/* ================= LABELS ================= */
+label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+/* ================= INPUTS ================= */
+input,
+textarea {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #2f7d6b;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(47, 125, 107, 0.15);
+}
+
+input[readonly],
+textarea[readonly] {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: default;
+}
+
+textarea {
+  min-height: 100px;
+  resize: none;
+}
+
+/* ================= PHONE INPUT ================= */
+.phone-container {
+  width: 100%;
+}
+
+.phone-input {
+  width: 100% !important;
+  height: 44px !important;
+  border-radius: 10px !important;
+  border: 1px solid #d1d5db !important;
+  background: #f9fafb !important;
+  font-size: 14px !important;
+  padding-left: 48px !important;
+  transition: all 0.2s ease !important;
+}
+
+.phone-input:focus {
+  border-color: #2f7d6b !important;
+  box-shadow: 0 0 0 3px rgba(47, 125, 107, 0.15) !important;
+  background: #ffffff !important;
+}
+
+.react-tel-input .flag-dropdown {
+  border-radius: 10px 0 0 10px !important;
+  border: 1px solid #d1d5db !important;
+  background: #f9fafb !important;
+}
+
+.react-tel-input .selected-flag:hover,
+.react-tel-input .selected-flag:focus {
+  background: #e5e7eb !important;
+}
+
+/* ================= PASSWORD FIELD ================= */
+.password-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.password-field input {
+  flex: 1;
+}
+
+.password-field span {
+  cursor: pointer;
+  color: #6b7280;
+  transition: 0.2s ease;
+}
+
+.password-field span:hover {
+  color: #111827;
+}
+
+/* ================= BUTTON ================= */
+.primary-btn {
+  margin-top: 30px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #2f7d6b, #256d5d);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(47, 125, 107, 0.25);
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ================= ALERTS ================= */
+.error-msg {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #fecaca;
+}
+
+.success-msg {
+  background: #ecfdf5;
+  color: #16a34a;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #bbf7d0;
+}
+
+/* ================= FIELD ERROR ================= */
+.field-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .full-width {
+    grid-column: span 1;
+  }
+
+  .profile-box {
+    padding: 24px;
+  }
+}
