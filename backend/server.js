@@ -23,20 +23,25 @@ const { markMessagesReadSocket } = require("./controllers/messageController");
 const app    = express();
 const server = http.createServer(app);
 
-/* ── ✅ CORS (FINAL FIX) ── */
+/* ── ✅ CORS (FINAL WORKING) ── */
 const allowedOrigins = [
   "http://localhost:5173",
   "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
 ];
 
 app.use(cors({
-  origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: function(origin, callback) {
+    // allow requests with no origin (like Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log("❌ Blocked by CORS:", origin);
+      callback(null, false);
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true
 }));
-
-// ✅ VERY IMPORTANT (fixes your error)
-app.options("*", cors());
 
 /* ── MIDDLEWARE ── */
 app.use(express.json());
@@ -75,8 +80,6 @@ io.on("connection", (socket) => {
 
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
-
-    console.log(`✅ User ${roomId} joined`);
   });
 
   socket.on("getOnlineUsers", () => {
@@ -122,14 +125,15 @@ app.get("/", (req, res) => {
 });
 
 /* ── DATABASE CONNECTION ── */
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB Connected");
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB Error:", err.message);
-    process.exit(1);
-  });
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("✅ MongoDB Connected"))
+.catch((err) => {
+  console.error("❌ MongoDB Error:", err.message);
+  process.exit(1);
+});
 
 /* ── START SERVER ── */
 const PORT = process.env.PORT || 5001;
