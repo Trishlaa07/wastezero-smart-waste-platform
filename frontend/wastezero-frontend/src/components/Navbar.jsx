@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import "../styles/Navbar.css";
+import "../styles/navbar.css";
 import { useSocket } from "../context/SocketContext";
 
 import {
