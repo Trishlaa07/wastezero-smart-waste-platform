@@ -15,21 +15,35 @@ const adminRoutes        = require("./routes/adminRoutes");
 const applicationRoutes  = require("./routes/applicationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes       = require("./routes/reportRoutes");
-const pickupRoutes       = require("./routes/pickupRoutes"); // ← only once
-const supportRoutes = require("./routes/supportRoutes");
-
+const pickupRoutes       = require("./routes/pickupRoutes");
+const supportRoutes      = require("./routes/supportRoutes");
 
 const { markMessagesReadSocket } = require("./controllers/messageController");
 
 const app    = express();
 const server = http.createServer(app);
 
-/* ── MIDDLEWARE ── */
+/* ── CORS CONFIG (FIXED) ── */
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
+];
+
 app.use(cors({
-  origin:      "http://localhost:5173",
-  methods:     ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: function(origin, callback) {
+    // allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
 }));
+
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
@@ -38,8 +52,9 @@ const { Server } = require("socket.io");
 
 const io = new Server(server, {
   cors: {
-    origin:  "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -52,6 +67,7 @@ io.on("connection", (socket) => {
 
   socket.on("join", (userId) => {
     if (!userId) return;
+
     const roomId = userId.toString();
 
     socket.rooms.forEach(room => {
@@ -64,6 +80,7 @@ io.on("connection", (socket) => {
 
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
+
     console.log(`✅ User ${roomId} joined. Online: ${onlineUsers.size}`);
   });
 
@@ -77,7 +94,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("typing", ({ sender, receiver }) => {
-    if (receiver) io.to(receiver.toString()).emit("typing", { sender });
+    if (receiver) {
+      io.to(receiver.toString()).emit("typing", { sender });
+    }
   });
 
   socket.on("disconnect", () => {
@@ -101,8 +120,8 @@ app.use("/api/applications",  applicationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages",      messageRoutes);
 app.use("/api/reports",       reportRoutes);
-app.use("/api/pickups",       pickupRoutes(io)); // ← only once, io passed correctly
-app.use("/api/support", supportRoutes);
+app.use("/api/pickups",       pickupRoutes(io));
+app.use("/api/support",       supportRoutes);
 
 app.get("/", (req, res) => res.send("API Running..."));
 
@@ -111,6 +130,10 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.error("❌ MongoDB Error:", err));
 
-/* ── START ── */
+/* ── START SERVER ── */
 const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
