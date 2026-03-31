@@ -304,6 +304,10 @@ function Navbar() {
       case "new_user":
         navigate("/users");
         break;
+      
+      case "support":
+        navigate("/admin/support");
+        break;
 
       default:
         navigate("/");

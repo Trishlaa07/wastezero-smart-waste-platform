@@ -21,8 +21,10 @@ import UsersPage from "./pages/admin/UsersPage";
 import Reports from "./pages/admin/Reports";
 import Moderation from "./pages/admin/Moderation";
 import PlatformControl from "./pages/admin/PlatformControl";
+import AdminSupport from "./pages/admin/AdminSupport";
 
 import SchedulePickup from "./pages/volunteer/SchedulePickup";
+import ManagePickups from "./pages/ngo/ManagePickups";   // ← added
 
 import Applications from "./pages/ngo/Applications";
 import Messages from "./pages/Messages";
@@ -44,33 +46,27 @@ function SuspensionWatcher() {
     if (!socket) return;
 
     const handleAutoSuspend = ({ userId }) => {
-      console.log("🔴 RECEIVED userAutoSuspended:", userId);
-
       const stored = localStorage.getItem("user");
       if (!stored) return;
 
       try {
-        const me = JSON.parse(stored);
-        console.log("🔴 LOGGED IN USER ID:", me._id || me.id);
-
-        // ✅ toString() on both sides — prevents ObjectId vs string mismatch
-        const meId         = (me._id || me.id)?.toString();
-        const suspendedId  = userId?.toString();
+        const me          = JSON.parse(stored);
+        const meId        = (me._id || me.id)?.toString();
+        const suspendedId = userId?.toString();
 
         if (meId === suspendedId) {
-          console.log("🔴 MATCH — logging out suspended user");
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           navigate("/login", {
-            replace: true,           // don't let them go back
+            replace: true,
             state: {
               suspended: true,
-              reason:    "Your account has been automatically suspended due to multiple reports.",
+              reason: "Your account has been automatically suspended due to multiple reports.",
             },
           });
         }
       } catch (e) {
-        console.log("SuspensionWatcher parse error:", e);
+        console.error("SuspensionWatcher parse error:", e);
       }
     };
 
@@ -116,16 +112,20 @@ function App() {
           <Route path="/reports"         element={<Reports />} />
           <Route path="/moderation"      element={<Moderation />} />
           <Route path="/platform-health" element={<PlatformControl />} />
+          <Route path="/admin/support" element={<AdminSupport />} />
 
-          <Route path="/schedule" element={<SchedulePickup />} />
+          {/* Volunteer */}
+          <Route path="/schedule"        element={<SchedulePickup />} />
+          <Route path="/impact"          element={<WasteStatistics />} />
 
-          {/* NGO / Messages */}
-          <Route path="/applications" element={<Applications />} />
-          <Route path="/messages"     element={<Messages />} />
+          {/* NGO */}
+          <Route path="/manage-pickups"  element={<ManagePickups />} />   {/* ← added */}
+          <Route path="/applications"    element={<Applications />} />
 
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/impact" element={<WasteStatistics />} />
+          {/* Shared */}
+          <Route path="/messages"  element={<Messages />} />
+          <Route path="/settings"  element={<Settings />} />
+          <Route path="/support"   element={<Support />} />
         </Routes>
       </BrowserRouter>
     </SocketProvider>

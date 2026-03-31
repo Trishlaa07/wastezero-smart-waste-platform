@@ -1,48 +1,167 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import { Bell, Lock, Shield, User, Globe, Moon, LogOut, CheckCircle } from "lucide-react";
+import axios from "axios";
+import {
+  Bell, Lock, Shield, User, Globe,
+  CheckCircle, ChevronRight, X,
+} from "lucide-react";
 import "../styles/settingsSupport.css";
+
+const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
 
 const Settings = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user")) || { name: "User", role: "volunteer" };
-  const isNGO = user.role === "ngo";
-  
+  const token    = localStorage.getItem("token");
+  const user     = JSON.parse(localStorage.getItem("user")) || {};
+  const isNGO    = user.role === "ngo";
+
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem("userSettings");
     return saved ? JSON.parse(saved) : {
       emailNotifications: true,
-      smsNotifications: false,
-      profileVisibility: true,
-      darkMode: document.documentElement.getAttribute("data-theme") === "dark",
-      autoMatch: true,
-      autoExpiry: false
+      profileVisibility:  true,
+      darkMode:           document.documentElement.getAttribute("data-theme") === "dark",
+      autoMatch:          true,
+      autoExpiry:         false,
     };
   });
 
-  const [toast, setToast] = useState("");
+  const [toast,        setToast]        = useState({ show: false, message: "", error: false });
+  const [pwModal,      setPwModal]      = useState(false);
+  const [deactModal,   setDeactModal]   = useState(false);
+  const [pwForm,       setPwForm]       = useState({ current: "", next: "", confirm: "" });
+  const [pwError,      setPwError]      = useState("");
+  const [pwLoading,    setPwLoading]    = useState(false);
+  const [deactLoading, setDeactLoading] = useState(false);
+  const [saving,       setSaving]       = useState("");
 
+  // ── Load preferences from backend ──
+  useEffect(() => {
+    if (!token) return;
+    axios.get(`${API}/api/settings/preferences`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then(res => {
+      const prefs = res.data.data;
+      setSettings(prev => ({
+        ...prev,
+        emailNotifications: prefs.emailNotifications ?? prev.emailNotifications,
+        autoMatch:          prefs.autoMatch          ?? prev.autoMatch,
+        autoExpiry:         prefs.autoExpiry         ?? prev.autoExpiry,
+      }));
+    })
+    .catch(() => {});
+  }, [token]);
+
+  // ── Persist locally + apply theme ──
   useEffect(() => {
     localStorage.setItem("userSettings", JSON.stringify(settings));
-    // Apply theme
-    if (settings.darkMode) {
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.setAttribute("data-theme", "light");
-    }
+    document.documentElement.setAttribute("data-theme", settings.darkMode ? "dark" : "light");
   }, [settings]);
 
-  const handleToggle = (key) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
-    setToast(`Updated ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-    setTimeout(() => setToast(""), 2000);
+  const showToast = (message, error = false) => {
+    setToast({ show: true, message, error });
+    setTimeout(() => setToast({ show: false, message: "", error: false }), 3500);
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+  const handleToggle = async (key) => {
+    const newVal = !settings[key];
+    setSettings(prev => ({ ...prev, [key]: newVal }));
+    setSaving(key);
+
+    try {
+      if (key === "emailNotifications") {
+        await axios.put(
+          `${API}/api/settings/notifications`,
+          { email: newVal },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        showToast(
+          newVal
+            ? "Email notifications enabled — check your inbox for a confirmation"
+            : "Email notifications disabled"
+        );
+      } else if (key === "autoMatch" || key === "autoExpiry") {
+        await axios.put(
+          `${API}/api/settings/preferences`,
+          { [key]: newVal },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (key === "autoMatch") {
+          showToast(
+            newVal
+              ? "Auto-match enabled — opportunities will be sorted by skill match"
+              : "Auto-match disabled — showing all opportunities"
+          );
+        } else {
+          showToast(
+            newVal
+              ? "Auto-expiry enabled — opportunities close after 30 days"
+              : "Auto-expiry disabled"
+          );
+        }
+      } else if (key === "darkMode") {
+        showToast(`Dark mode ${newVal ? "enabled" : "disabled"}`);
+      } else {
+        showToast("Setting updated");
+      }
+    } catch {
+      setSettings(prev => ({ ...prev, [key]: !newVal }));
+      showToast("Failed to save. Please try again.", true);
+    } finally {
+      setSaving("");
+    }
+  };
+
+  // ── Change password ──
+  const handleChangePassword = async () => {
+    setPwError("");
+    if (!pwForm.current || !pwForm.next || !pwForm.confirm) {
+      setPwError("All fields are required."); return;
+    }
+    if (pwForm.next.length < 6) {
+      setPwError("New password must be at least 6 characters."); return;
+    }
+    if (pwForm.next !== pwForm.confirm) {
+      setPwError("New passwords do not match."); return;
+    }
+    setPwLoading(true);
+    try {
+      await axios.put(
+        `${API}/api/settings/change-password`,
+        { currentPassword: pwForm.current, newPassword: pwForm.next },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setPwModal(false);
+      setPwForm({ current: "", next: "", confirm: "" });
+      showToast("Password changed successfully!");
+    } catch (err) {
+      setPwError(err.response?.data?.message || "Failed to change password.");
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
+  // ── Deactivate ──
+  const handleDeactivate = async () => {
+    setDeactLoading(true);
+    try {
+      await axios.delete(`${API}/api/settings/account`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Send reactivation instructions email via backend
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login", {
+        state: { deactivated: true },
+      });
+    } catch {
+      showToast("Failed to deactivate. Please try again.", true);
+    } finally {
+      setDeactLoading(false);
+      setDeactModal(false);
+    }
   };
 
   const SettingToggle = ({ title, description, settingKey }) => (
@@ -52,12 +171,12 @@ const Settings = () => {
         <span className="setting-desc">{description}</span>
       </div>
       <label className="switch">
-        <input 
-          type="checkbox" 
-          checked={settings[settingKey]} 
-          onChange={() => handleToggle(settingKey)} 
+        <input
+          type="checkbox"
+          checked={settings[settingKey]}
+          onChange={() => handleToggle(settingKey)}
         />
-        <span className="slider"></span>
+        <span className={`slider ${saving === settingKey ? "slider-saving" : ""}`} />
       </label>
     </div>
   );
@@ -74,41 +193,45 @@ const Settings = () => {
           </div>
         </div>
 
-        {toast && (
-          <div className="setting-toast">
-            <CheckCircle size={14} /> {toast}
+        {toast.show && (
+          <div className={`setting-toast ${toast.error ? "setting-toast-error" : ""}`}>
+            <CheckCircle size={14} /> {toast.message}
           </div>
         )}
 
         <div className="settings-grid">
-          {/* Notifications */}
+
+          {/* ── Notifications ── */}
           <div className="settings-card">
             <h3><Bell size={18} /> Notifications</h3>
-            <SettingToggle 
-              title="Email Notifications" 
-              description={isNGO ? "Alerts for new volunteer applications" : "Receive updates about your applications"} 
-              settingKey="emailNotifications" 
-            />
-            <SettingToggle 
-              title="SMS Alerts" 
-              description="Get text messages for urgent platform active" 
-              settingKey="smsNotifications" 
+            <SettingToggle
+              title="Email Notifications"
+              description={
+                isNGO
+                  ? "Receive emails for new applications and opportunity updates"
+                  : "Get emails for application status, pickups, and new matches"
+              }
+              settingKey="emailNotifications"
             />
           </div>
 
-          {/* Role Specific Settings */}
+          {/* ── Role-specific ── */}
           {isNGO ? (
             <div className="settings-card">
               <h3><Globe size={18} /> Opportunity Management</h3>
-              <SettingToggle 
-                title="Auto-Expiry" 
-                description="Automatically close opportunities after 30 days" 
-                settingKey="autoExpiry" 
+              <SettingToggle
+                title="Auto-Expiry"
+                description="Automatically close your opportunities 30 days after posting"
+                settingKey="autoExpiry"
               />
-              <div className="setting-item" style={{ cursor: "pointer" }} onClick={() => navigate("/opportunities")}>
+              <div
+                className="setting-item"
+                style={{ cursor: "pointer" }}
+                onClick={() => navigate("/opportunities")}
+              >
                 <div className="setting-info">
-                  <span className="setting-title">Default Opportunity Location</span>
-                  <span className="setting-desc">Set a default location for new posts</span>
+                  <span className="setting-title">Manage Opportunities</span>
+                  <span className="setting-desc">View and edit your posted opportunities</span>
                 </div>
                 <ChevronRight size={16} color="#9ca3af" />
               </div>
@@ -116,33 +239,26 @@ const Settings = () => {
           ) : (
             <div className="settings-card">
               <h3><Globe size={18} /> Volunteer Preferences</h3>
-              <SettingToggle 
-                title="Auto-Match" 
-                description="Suggest new opportunities based on your skills" 
-                settingKey="autoMatch" 
+              <SettingToggle
+                title="Auto-Match"
+                description="Sort opportunities by skill match. Turn off to see all opportunities"
+                settingKey="autoMatch"
               />
-              <div className="setting-item" style={{ cursor: "pointer" }} onClick={() => navigate("/impact")}>
-                <div className="setting-info">
-                  <span className="setting-title">Public Impact Stats</span>
-                  <span className="setting-desc">Configure who can see your waste stats</span>
-                </div>
-                <ChevronRight size={16} color="#9ca3af" />
-              </div>
             </div>
           )}
 
-          {/* Privacy & Security */}
+          {/* ── Privacy & Security ── */}
           <div className="settings-card">
             <h3><Shield size={18} /> Privacy & Security</h3>
-            <SettingToggle 
-              title="Public Visibility" 
-              description={isNGO ? "Make your NGO profile discoverable" : "Allow NGOs to see your full bio"} 
-              settingKey="profileVisibility" 
+            <SettingToggle
+              title="Public Visibility"
+              description={isNGO ? "Make your NGO profile discoverable" : "Allow NGOs to see your skills and bio"}
+              settingKey="profileVisibility"
             />
-            <div 
-              className="setting-item" 
+            <div
+              className="setting-item"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate("/profile")}
+              onClick={() => { setPwModal(true); setPwError(""); }}
             >
               <div className="setting-info">
                 <span className="setting-title">Change Password</span>
@@ -152,33 +268,125 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Account */}
+          {/* ── Account ── */}
           <div className="settings-card">
-            <h3><User size={18} /> Account details</h3>
-            <SettingToggle 
-              title="Dark Mode theme" 
-              description="Enable a darker interface for better eye comfort" 
-              settingKey="darkMode" 
+            <h3><User size={18} /> Account</h3>
+            <SettingToggle
+              title="Dark Mode"
+              description="Enable a darker interface for better eye comfort"
+              settingKey="darkMode"
             />
-            <div 
-              className="setting-item" 
-              style={{ color: "#dc2626", cursor: "pointer", borderTop: "1px solid #fee2e2", marginTop: "10px", paddingTop: "15px" }}
-              onClick={handleSignOut}
+            <div
+              className="setting-item"
+              style={{ cursor: "pointer", borderTop: "1px solid #fef3c7", marginTop: 10, paddingTop: 15 }}
+              onClick={() => setDeactModal(true)}
             >
               <div className="setting-info">
-                <span className="setting-title" style={{ color: "#dc2626" }}>Log Out</span>
-                <span className="setting-desc">Safely sign out of your account</span>
+                <span className="setting-title" style={{ color: "#b45309" }}>Deactivate Account</span>
+                <span className="setting-desc">Temporarily disable your account</span>
               </div>
-              <LogOut size={16} color="#dc2626" />
+              <Shield size={16} color="#b45309" />
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ── Change Password Modal ── */}
+      {pwModal && (
+        <div className="settings-modal-overlay" onClick={() => setPwModal(false)}>
+          <div className="settings-modal" onClick={e => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <h3>Change Password</h3>
+              <button className="settings-modal-close" onClick={() => setPwModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="settings-modal-body">
+              {pwError && <div className="settings-modal-error">⚠ {pwError}</div>}
+              <div className="settings-modal-field">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  value={pwForm.current}
+                  onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div className="settings-modal-field">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  value={pwForm.next}
+                  onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))}
+                  placeholder="At least 6 characters"
+                />
+              </div>
+              <div className="settings-modal-field">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  value={pwForm.confirm}
+                  onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+                  placeholder="Repeat new password"
+                />
+              </div>
+            </div>
+            <div className="settings-modal-footer">
+              <button className="settings-cancel-btn" onClick={() => setPwModal(false)}>Cancel</button>
+              <button className="settings-save-btn" onClick={handleChangePassword} disabled={pwLoading}>
+                {pwLoading ? "Saving…" : "Save Password"}
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* ── Deactivate Confirmation Modal ── */}
+      {deactModal && (
+        <div className="settings-modal-overlay" onClick={() => setDeactModal(false)}>
+          <div className="settings-modal" onClick={e => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <h3 style={{ color: "#b45309" }}>Deactivate Account</h3>
+              <button className="settings-modal-close" onClick={() => setDeactModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="settings-modal-body">
+              <div style={{
+                background: "#fffbeb", border: "1px solid #fde68a",
+                borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "#92400e",
+                lineHeight: 1.6,
+              }}>
+                <strong>Are you sure?</strong>
+                <p style={{ margin: "8px 0 0" }}>
+                  Your account will be disabled and you'll be logged out.
+                  You can reactivate it anytime from the login page using
+                  your email and password.
+                </p>
+              </div>
+            </div>
+            <div className="settings-modal-footer">
+              <button className="settings-cancel-btn" onClick={() => setDeactModal(false)}>
+                Cancel
+              </button>
+              <button
+                onClick={handleDeactivate}
+                disabled={deactLoading}
+                style={{
+                  padding: "9px 20px", borderRadius: 8, border: "none",
+                  background: "#b45309", color: "#fff", fontSize: 13,
+                  fontWeight: 700, cursor: "pointer", opacity: deactLoading ? 0.6 : 1,
+                }}
+              >
+                {deactLoading ? "Deactivating…" : "Yes, Deactivate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
-
-// Add ChevronRight to lucide-react imports if not there
-import { ChevronRight } from "lucide-react";
 
 export default Settings;

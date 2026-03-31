@@ -1,0 +1,139 @@
+.sp-page {
+  padding: 28px 32px;
+  background: #f9fafb;
+  min-height: 100%;
+}
+
+.sp-header {
+  margin-bottom: 24px;
+}
+
+.sp-heading {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sp-sub {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* LIST */
+.sp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sp-card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px 20px;
+  border: 1px solid #f3f4f6;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* TOP */
+.sp-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sp-user {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.sp-subject {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.sp-user-name {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* STATUS */
+.sp-status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sp-status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.sp-status.resolved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* MESSAGE */
+.sp-message {
+  font-size: 14px;
+  color: #374151;
+  margin: 10px 0;
+}
+
+/* REPLY */
+.sp-reply {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sp-reply input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.sp-reply button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #1D9E75;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ACTIONS */
+.sp-actions {
+  margin-top: 10px;
+}
+
+.resolve-btn {
+  background: transparent;
+  border: 1px solid #1D9E75;
+  color: #1D9E75;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ADMIN REPLY */
+.sp-admin-reply {
+  margin-top: 12px;
+  background: #f0fdf4;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.sp-empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 30px;
+}

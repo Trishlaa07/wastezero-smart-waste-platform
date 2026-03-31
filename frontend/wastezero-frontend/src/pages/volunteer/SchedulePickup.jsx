@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Layout from "../../components/Layout";
 import axios from "axios";
+import { useSocket } from "../../context/SocketContext";
+import "../../styles/SchedulePickup.css";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
 
@@ -22,184 +23,117 @@ const WASTE_TYPES = [
   "Organic Waste",
 ];
 
-// Mock agents — replace with real API data from your backend
-const MOCK_AGENTS = [
-  { id: 1, name: "Ravi Kumar",    area: "North Zone" },
-  { id: 2, name: "Priya Sharma",  area: "South Zone" },
-  { id: 3, name: "Anil Verma",    area: "East Zone"  },
-  { id: 4, name: "Divya Nair",    area: "West Zone"  },
-];
-
-// ─── tiny inline styles (no extra CSS file needed) ───────────────────────────
-const S = {
-  page:        { padding: "24px 28px" },
-  header:      { marginBottom: 24 },
-  h2:          { fontSize: 22, fontWeight: 600, margin: 0 },
-  sub:         { fontSize: 14, color: "#64748b", marginTop: 4 },
-
-  tabs:        { display: "flex", borderBottom: "1px solid #e2e8f0", marginBottom: 24 },
-  tab:         { padding: "10px 20px", fontSize: 14, fontWeight: 500, border: "none",
-                 background: "none", cursor: "pointer", color: "#64748b",
-                 borderBottom: "2px solid transparent" },
-  tabActive:   { color: "#2563eb", borderBottom: "2px solid #2563eb" },
-
-  cols:        { display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" },
-  colForm:     { flex: "1 1 420px", minWidth: 0 },
-  colRight:    { flex: "1 1 340px", minWidth: 0 },
-
-  card:        { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8,
-                 padding: "20px 24px", marginBottom: 16 },
-  cardTitle:   { fontSize: 16, fontWeight: 600, margin: "0 0 4px" },
-  cardSub:     { fontSize: 13, color: "#64748b", marginBottom: 18 },
-
-  field:       { marginBottom: 16 },
-  label:       { display: "block", fontSize: 13, fontWeight: 500,
-                 color: "#374151", marginBottom: 6 },
-  help:        { fontSize: 12, color: "#94a3b8", marginBottom: 8 },
-  input:       { width: "100%", padding: "8px 12px", fontSize: 14,
-                 border: "1px solid #d1d5db", borderRadius: 6, outline: "none",
-                 boxSizing: "border-box" },
-  select:      { width: "100%", padding: "8px 12px", fontSize: 14,
-                 border: "1px solid #d1d5db", borderRadius: 6, outline: "none",
-                 background: "#fff", boxSizing: "border-box" },
-  textarea:    { width: "100%", padding: "8px 12px", fontSize: 14,
-                 border: "1px solid #d1d5db", borderRadius: 6, outline: "none",
-                 minHeight: 80, resize: "vertical", boxSizing: "border-box" },
-  footnote:    { fontSize: 12, color: "#94a3b8", marginTop: 4 },
-
-  row2:        { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-
-  checkGrid:   { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
-  checkLabel:  { display: "flex", alignItems: "center", gap: 8, fontSize: 14,
-                 color: "#374151", cursor: "pointer" },
-
-  actRight:    { display: "flex", justifyContent: "flex-end", marginTop: 8 },
-  actBetween:  { display: "flex", justifyContent: "space-between", marginTop: 8 },
-
-  btnPrimary:  { padding: "8px 20px", background: "#2563eb", color: "#fff",
-                 border: "none", borderRadius: 6, fontSize: 14, fontWeight: 500,
-                 cursor: "pointer" },
-  btnSecondary:{ padding: "8px 20px", background: "#fff", color: "#374151",
-                 border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14,
-                 fontWeight: 500, cursor: "pointer" },
-  btnSm:       { padding: "6px 14px", background: "#2563eb", color: "#fff",
-                 border: "none", borderRadius: 5, fontSize: 13, cursor: "pointer" },
-  btnSmGray:   { padding: "6px 14px", background: "#f1f5f9", color: "#374151",
-                 border: "1px solid #e2e8f0", borderRadius: 5, fontSize: 13,
-                 cursor: "pointer" },
-
-  error:       { background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6,
-                 padding: "10px 14px", fontSize: 13, color: "#dc2626", marginBottom: 12 },
-  success:     { background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 6,
-                 padding: "10px 14px", fontSize: 13, color: "#16a34a", marginBottom: 12 },
-
-  // history items
-  histItem:    { padding: "12px 0", borderBottom: "1px solid #f1f5f9",
-                 display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
-  histDate:    { fontSize: 13, fontWeight: 500, color: "#1e293b" },
-  histMeta:    { fontSize: 12, color: "#64748b", marginTop: 2 },
-  histAddr:    { fontSize: 12, color: "#94a3b8", marginTop: 1 },
-
-  // status pills
-  pillPending:  { fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 99,
-                  background: "#fef9c3", color: "#854d0e" },
-  pillAssigned: { fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 99,
-                  background: "#dcfce7", color: "#166534" },
-  pillDone:     { fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 99,
-                  background: "#dbeafe", color: "#1e40af" },
-
-  // NGO assign row
-  assignRow:   { display: "flex", gap: 8, alignItems: "center", marginTop: 8 },
-  assignSel:   { flex: 1, padding: "6px 10px", fontSize: 13,
-                 border: "1px solid #d1d5db", borderRadius: 6, background: "#fff" },
-  assignedTxt: { fontSize: 13, color: "#16a34a", fontWeight: 500 },
-
-  // empty state
-  emptyBox:    { textAlign: "center", padding: "32px 0" },
-  emptyTxt:    { fontSize: 14, color: "#94a3b8", marginBottom: 12 },
-
-  // step indicator
-  stepBar:     { display: "flex", alignItems: "center", marginBottom: 20 },
-  stepDot:     (active, done) => ({
-                 width: 28, height: 28, borderRadius: "50%", display: "flex",
-                 alignItems: "center", justifyContent: "center", fontSize: 13,
-                 fontWeight: 600, flexShrink: 0,
-                 background: done ? "#2563eb" : active ? "#2563eb" : "#e2e8f0",
-                 color:      done ? "#fff"    : active ? "#fff"    : "#94a3b8",
-               }),
-  stepLine:    (done) => ({
-                 flex: 1, height: 2, margin: "0 8px",
-                 background: done ? "#2563eb" : "#e2e8f0",
-               }),
-  stepLbl:     (active) => ({
-                 fontSize: 12, marginTop: 4, color: active ? "#2563eb" : "#94a3b8",
-                 fontWeight: active ? 600 : 400,
-               }),
-
-  // section label
-  sectionLbl:  { fontSize: 11, fontWeight: 600, letterSpacing: "0.07em",
-                 color: "#94a3b8", textTransform: "uppercase", marginBottom: 10 },
-};
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
+// ─── Status Pill ──────────────────────────────────────────────────────────────
 function StatusPill({ status }) {
-  if (status === "assigned" || status === "accepted")
-    return <span style={S.pillAssigned}>Assigned</span>;
-  if (status === "completed")
-    return <span style={S.pillDone}>Completed</span>;
-  return <span style={S.pillPending}>Pending</span>;
+  const map = {
+    pending:      { bg: "#fef3c7", color: "#92400e" },
+    accepted:     { bg: "#dcfce7", color: "#166534" },
+    "in-transit": { bg: "#dbeafe", color: "#1e40af" },
+    completed:    { bg: "#f3f4f6", color: "#374151" },
+    cancelled:    { bg: "#fee2e2", color: "#991b1b" },
+  };
+  const s = map[status] || map.pending;
+  return (
+    <span style={{
+      padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+      background: s.bg, color: s.color, textTransform: "capitalize",
+      whiteSpace: "nowrap",
+    }}>
+      {status}
+    </span>
+  );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 function SchedulePickup() {
-  const navigate = useNavigate();
-
-  const token = localStorage.getItem("token");
-  const user = useMemo(() => {
+  const token  = localStorage.getItem("token");
+  const socket = useSocket();
+  const user   = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user")); }
     catch { return null; }
   }, []);
 
-  // role: "volunteer" or "ngo" — read from user object; fall back to "volunteer"
+  // Redirect unauthenticated users rather than silently treating them as volunteers
   const role = user?.role === "ngo" || user?.role === "admin" ? "ngo" : "volunteer";
 
-  // ── shared state ──
-  const [tab, setTab]     = useState(role === "ngo" ? "manage" : "new");
-  const [step, setStep]   = useState(1);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [tab,        setTab]        = useState(role === "ngo" ? "manage" : "new");
+  const [step,       setStep]       = useState(1);
+  const [error,      setError]      = useState("");
+  const [notice,     setNotice]     = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loading,    setLoading]    = useState(true);
 
-  // ── volunteer: pickup form ──
-  const emptyForm = { address: "", city: "", pickupDate: "",
-                      timeSlot: "", wasteTypes: [], additionalNotes: "" };
-  const [form, setForm] = useState(emptyForm);
+  const emptyForm = {
+    address: "", city: "", pickupDate: "",
+    timeSlot: "", wasteTypes: [], additionalNotes: "",
+  };
+  const [form,    setForm]    = useState(emptyForm);
+  const [pickups, setPickups] = useState([]);
 
-  // ── pickups list (volunteer sees own; NGO sees all pending) ──
-  const [pickups, setPickups] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("wz_pickups") || "[]"); }
-    catch { return []; }
-  });
+  // NGO agent assignment state
+  const [agentInputs, setAgentInputs] = useState({}); // pickupId → agent name string
 
-  // ── agents (NGO view) ──
-  const [agents]       = useState(MOCK_AGENTS);
-  const [agentSel, setAgentSel] = useState({}); // { [pickupId]: agentId }
+  // ── Fetch pickups from backend ──
+  const fetchPickups = useCallback(async () => {
+    if (!token) { setLoading(false); return; }
+    try {
+      setLoading(true);
+      const endpoint = role === "ngo" ? "/api/pickups/ngo" : "/api/pickups";
+      const res = await axios.get(`${API}${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (Array.isArray(res.data)) setPickups(res.data);
+    } catch (err) {
+      console.error("Failed to fetch pickups:", err);
+      setError("Could not load pickups. Please refresh.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, role]);
 
-  // persist demo state
+  useEffect(() => { fetchPickups(); }, [fetchPickups]);
+
+  // ── Real-time: new pickup confirmed from backend ──
   useEffect(() => {
-    try { localStorage.setItem("wz_pickups", JSON.stringify(pickups)); }
-    catch {}
-  }, [pickups]);
+    if (!socket) return;
+    const handleNew = (newPickup) => {
+      // Only add to volunteer's own list if it belongs to them
+      const myId = user?._id || user?.id;
+      const volunteerId =
+        typeof newPickup.volunteer === "object"
+          ? newPickup.volunteer._id || newPickup.volunteer.id
+          : newPickup.volunteer;
+      if (myId && volunteerId?.toString() !== myId?.toString()) return;
 
-  // fetch from backend if token exists
+      setPickups(prev => {
+        if (prev.find(p => p._id === newPickup._id)) return prev;
+        return [newPickup, ...prev];
+      });
+    };
+    socket.on("newPickup", handleNew);
+    return () => socket.off("newPickup", handleNew);
+  }, [socket, user]);
+
+  // ── Real-time: status/agent updated by NGO ──
   useEffect(() => {
-    if (!token) return;
-    axios.get(`${API}/api/pickups`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => { if (Array.isArray(res.data)) setPickups(res.data); })
-      .catch(() => {});
-  }, [token]);
+    if (!socket) return;
+    const handleUpdated = (updated) => {
+      setPickups(prev =>
+        prev.map(p => p._id === updated._id ? { ...p, ...updated } : p)
+      );
+    };
+    socket.on("pickupUpdated", handleUpdated);
+    return () => socket.off("pickupUpdated", handleUpdated);
+  }, [socket]);
 
-  // ── volunteer: validation ──
+  // ── Auto-dismiss notice ──
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(""), 5000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  // ── Step 1 validation ──
   const canStep2 = () =>
     form.address.trim() && form.city.trim() && form.pickupDate && form.timeSlot;
 
@@ -220,286 +154,274 @@ function SchedulePickup() {
         : [...prev.wasteTypes, wt],
     }));
 
+  // ── Submit new pickup ──
   const handleSubmit = async () => {
     setError("");
     if (!form.wasteTypes.length) {
       setError("Please select at least one waste type.");
       return;
     }
+    if (!token) {
+      setError("You must be logged in to schedule a pickup.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const entry = {
-        id:         crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        createdAt:  new Date().toISOString(),
-        ...form,
-        status:     "pending",
-        agentName:  null,
-        userName:   user?.name || "Volunteer",
-      };
-      setPickups(prev => [entry, ...prev]);
+      const res = await axios.post(
+        `${API}/api/pickups`,
+        {
+          address:         form.address,
+          city:            form.city,
+          pickupDate:      form.pickupDate,
+          timeSlot:        form.timeSlot,
+          wasteType:       form.wasteTypes.join(", "), // backend stores as string
+          additionalNotes: form.additionalNotes,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Add the real backend entry (has _id) to the top of the list
+      setPickups(prev => [res.data, ...prev]);
       setNotice("Pickup scheduled! The NGO will assign an agent shortly.");
       setForm(emptyForm);
       setStep(1);
       setTab("history");
-
-      // best-effort backend call
-      if (token) {
-        await axios.post(`${API}/api/pickups`, {
-          address: form.address, city: form.city,
-          pickupDate: form.pickupDate, timeSlot: form.timeSlot,
-          wasteType: form.wasteTypes.join(", "),
-          additionalNotes: form.additionalNotes,
-        }, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-      }
-    } catch (e) {
-      setError(e?.message || "Failed to schedule pickup.");
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to schedule pickup. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ── NGO: assign agent ──
+  // ── NGO: assign agent (updates status to "accepted") ──
   const assignAgent = async (pickupId) => {
-    const agentId = agentSel[pickupId];
-    if (!agentId) { setError("Please select an agent first."); return; }
-    const agent = agents.find(a => a.id === Number(agentId));
-    setPickups(prev =>
-      prev.map(p => p.id === pickupId
-        ? { ...p, status: "assigned", agentName: agent.name, agentArea: agent.area }
-        : p)
-    );
-    setNotice(`Agent "${agent.name}" assigned successfully.`);
-    setAgentSel(prev => { const n = { ...prev }; delete n[pickupId]; return n; });
-
-    // best-effort backend
-    if (token) {
-      await axios.patch(`${API}/api/pickups/${pickupId}/assign`,
-        { agentId },
+    const agentName = (agentInputs[pickupId] || "").trim();
+    if (!agentName) {
+      setError("Please enter an agent name before assigning.");
+      return;
+    }
+    setError("");
+    try {
+      const res = await axios.put(
+        `${API}/api/pickups/${pickupId}/status`,
+        { status: "accepted", assignedTo: agentName },
         { headers: { Authorization: `Bearer ${token}` } }
-      ).catch(() => {});
+      );
+      setPickups(prev =>
+        prev.map(p => (p._id === pickupId ? { ...p, ...res.data } : p))
+      );
+      setAgentInputs(prev => { const n = { ...prev }; delete n[pickupId]; return n; });
+      setNotice(`Agent "${agentName}" assigned successfully.`);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to assign agent.");
     }
   };
 
-  // ── derived ──
-  const myPickups      = pickups; // volunteer sees all own; NGO sees all
+  // ── Volunteer: cancel a pending pickup ──
+  const cancelPickup = async (pickupId) => {
+    if (!window.confirm("Are you sure you want to cancel this pickup?")) return;
+    try {
+      await axios.delete(`${API}/api/pickups/${pickupId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPickups(prev =>
+        prev.map(p => (p._id === pickupId ? { ...p, status: "cancelled" } : p))
+      );
+      setNotice("Pickup cancelled.");
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to cancel pickup.");
+    }
+  };
+
   const pendingPickups = pickups.filter(p => p.status === "pending");
 
-  // auto-dismiss notice
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(""), 5000);
-    return () => clearTimeout(t);
-  }, [notice]);
+  const tabs =
+    role === "ngo"
+      ? [
+          { key: "manage",  label: "Manage Pickups"    },
+          { key: "history", label: "All Pickup History" },
+        ]
+      : [
+          { key: "new",     label: "Schedule New Pickup" },
+          { key: "history", label: "Pickup History"      },
+        ];
 
-  // ── tabs config ──
-  const volunteerTabs = [
-    { key: "new",     label: "Schedule New Pickup" },
-    { key: "history", label: "Pickup History"       },
-  ];
-  const ngoTabs = [
-    { key: "manage",  label: "Manage Pickups"       },
-    { key: "history", label: "All Pickup History"   },
-  ];
-  const tabs = role === "ngo" ? ngoTabs : volunteerTabs;
+  // ── Helper: normalise wasteType for display ──
+  const displayWaste = (p) =>
+    Array.isArray(p.wasteTypes) ? p.wasteTypes.join(", ") : p.wasteType || "—";
 
   return (
     <Layout>
-      <div style={S.page}>
+      <div className="sp-page">
 
-        {/* Header */}
-        <div style={S.header}>
-          <h2 style={S.h2}>Schedule Pickup</h2>
-          <p style={S.sub}>
+        {/* ── Header ── */}
+        <div className="sp-page-header">
+          <h2 className="sp-page-title">Schedule Pickup</h2>
+          <p className="sp-page-sub">
             {role === "ngo"
               ? "Review incoming requests and assign pickup agents"
               : "Request waste collection and manage your pickups"}
           </p>
         </div>
 
-        {/* Notice / error banner */}
-        {notice && <div style={S.success}>{notice}</div>}
+        {notice && <div className="sp-notice">{notice}</div>}
 
-        {/* Tabs */}
-        <div style={S.tabs}>
+        {/* ── Tabs ── */}
+        <div className="sp-tabs">
           {tabs.map(t => (
             <button
               key={t.key}
-              style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }}
+              className={`sp-tab${tab === t.key ? " active" : ""}`}
               onClick={() => { setTab(t.key); setError(""); setStep(1); }}
             >
               {t.label}
               {t.key === "manage" && pendingPickups.length > 0 && (
-                <span style={{
-                  marginLeft: 6, background: "#2563eb", color: "#fff",
-                  borderRadius: 99, fontSize: 11, padding: "1px 7px", fontWeight: 600,
-                }}>
-                  {pendingPickups.length}
-                </span>
+                <span className="sp-tab-badge">{pendingPickups.length}</span>
               )}
             </button>
           ))}
         </div>
 
         {/* ══════════════════════════════════════════
-            VOLUNTEER — New Pickup (2-step)
+            VOLUNTEER — Schedule New Pickup
         ══════════════════════════════════════════ */}
         {tab === "new" && role === "volunteer" && (
-          <div style={S.cols}>
-            <div style={S.colForm}>
-              <div style={S.card}>
+          <div className="sp-card sp-form-card">
 
-                {/* Step indicator */}
-                <div style={{ ...S.stepBar, marginBottom: 20 }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <div style={S.stepDot(step === 1, step > 1)}>1</div>
-                    <span style={S.stepLbl(step === 1)}>Location & Time</span>
+            {/* Step bar */}
+            <div className="sp-step-bar">
+              <div className="sp-step-wrap">
+                <div className={`sp-step-dot${step >= 1 ? " active" : ""}${step > 1 ? " done" : ""}`}>
+                  {step > 1 ? "✓" : "1"}
+                </div>
+                <span className={`sp-step-lbl${step === 1 ? " active" : ""}`}>
+                  Location &amp; Time
+                </span>
+              </div>
+              <div className={`sp-step-connector${step > 1 ? " done" : ""}`} />
+              <div className="sp-step-wrap">
+                <div className={`sp-step-dot${step === 2 ? " active" : ""}`}>2</div>
+                <span className={`sp-step-lbl${step === 2 ? " active" : ""}`}>
+                  Waste Details
+                </span>
+              </div>
+            </div>
+
+            <div className="sp-card-title">
+              {step === 1 ? "Request Waste Collection" : "Waste Details"}
+            </div>
+            <p className="sp-card-sub">
+              {step === 1
+                ? "Fill in the details to schedule a pickup for your recyclable waste"
+                : "Select the type of waste and add any special instructions"}
+            </p>
+
+            {error && <div className="sp-error">{error}</div>}
+
+            {step === 1 && (
+              <div className="sp-form-body">
+                <div className="sp-field">
+                  <label>Address</label>
+                  <input
+                    value={form.address}
+                    onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+                    placeholder="Enter your street address"
+                  />
+                </div>
+
+                <div className="sp-row-2">
+                  <div className="sp-field">
+                    <label>City</label>
+                    <input
+                      value={form.city}
+                      onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
+                      placeholder="Your city"
+                    />
                   </div>
-                  <div style={S.stepLine(step > 1)} />
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <div style={S.stepDot(step === 2, false)}>2</div>
-                    <span style={S.stepLbl(step === 2)}>Waste Details</span>
+                  <div className="sp-field">
+                    <label>Pickup Date</label>
+                    <input
+                      type="date"
+                      value={form.pickupDate}
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={e => setForm(p => ({ ...p, pickupDate: e.target.value }))}
+                    />
                   </div>
                 </div>
 
-                <div style={S.cardTitle}>
-                  {step === 1 ? "Request Waste Collection" : "Waste Details"}
+                <div className="sp-field">
+                  <label>Preferred Time Slot</label>
+                  <select
+                    value={form.timeSlot}
+                    onChange={e => setForm(p => ({ ...p, timeSlot: e.target.value }))}
+                  >
+                    <option value="">Select a time slot</option>
+                    {TIME_SLOTS.map(t => <option key={t}>{t}</option>)}
+                  </select>
                 </div>
-                <p style={S.cardSub}>
-                  {step === 1
-                    ? "Fill in the details to schedule a pickup for your recyclable waste"
-                    : "Select the type of waste and add any special instructions"}
-                </p>
 
-                {error && <div style={S.error}>{error}</div>}
+                <div className="sp-actions-right">
+                  <button className="sp-primary-btn" onClick={goNext}>
+                    Next Step →
+                  </button>
+                </div>
+              </div>
+            )}
 
-                {/* ── Step 1 ── */}
-                {step === 1 && (
-                  <>
-                    <div style={S.field}>
-                      <label style={S.label}>Address</label>
-                      <input
-                        style={S.input}
-                        value={form.address}
-                        onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-                        placeholder="Enter your street address"
-                      />
-                    </div>
-
-                    <div style={S.row2}>
-                      <div style={S.field}>
-                        <label style={S.label}>City</label>
-                        <input
-                          style={S.input}
-                          value={form.city}
-                          onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
-                          placeholder="Your city"
-                        />
-                      </div>
-                      <div style={S.field}>
-                        <label style={S.label}>Pickup Date</label>
-                        <input
-                          style={S.input}
-                          type="date"
-                          value={form.pickupDate}
-                          min={new Date().toISOString().split("T")[0]}
-                          onChange={e => setForm(p => ({ ...p, pickupDate: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={S.field}>
-                      <label style={S.label}>Preferred Time Slot</label>
-                      <select
-                        style={S.select}
-                        value={form.timeSlot}
-                        onChange={e => setForm(p => ({ ...p, timeSlot: e.target.value }))}
+            {step === 2 && (
+              <div className="sp-form-body">
+                <div className="sp-field">
+                  <label>Waste Types</label>
+                  <p className="sp-help">Select all types that apply</p>
+                  <div className="sp-check-grid">
+                    {WASTE_TYPES.map(wt => (
+                      <label
+                        key={wt}
+                        className={`sp-check-label${form.wasteTypes.includes(wt) ? " checked" : ""}`}
                       >
-                        <option value="">Select a time slot</option>
-                        {TIME_SLOTS.map(t => <option key={t}>{t}</option>)}
-                      </select>
-                    </div>
-
-                    <div style={S.actRight}>
-                      <button style={S.btnPrimary} onClick={goNext}>
-                        Next Step →
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {/* ── Step 2 ── */}
-                {step === 2 && (
-                  <>
-                    <div style={S.field}>
-                      <label style={S.label}>Waste Types</label>
-                      <p style={S.help}>Select all types that apply</p>
-                      <div style={S.checkGrid}>
-                        {WASTE_TYPES.map(wt => (
-                          <label key={wt} style={S.checkLabel}>
-                            <input
-                              type="checkbox"
-                              checked={form.wasteTypes.includes(wt)}
-                              onChange={() => toggleWasteType(wt)}
-                            />
-                            {wt}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div style={S.field}>
-                      <label style={S.label}>Additional Notes</label>
-                      <p style={S.help}>
-                        Any special instructions for the pickup team (access, packaging, etc.)
-                      </p>
-                      <textarea
-                        style={S.textarea}
-                        value={form.additionalNotes}
-                        onChange={e => setForm(p => ({ ...p, additionalNotes: e.target.value }))}
-                        placeholder="e.g. Gate code is 1234, bags are near the entrance…"
-                      />
-                      <p style={S.footnote}>Write "N/A" if no special instructions.</p>
-                    </div>
-
-                    <div style={S.actBetween}>
-                      <button style={S.btnSecondary} onClick={() => setStep(1)} disabled={submitting}>
-                        ← Previous
-                      </button>
-                      <button style={S.btnPrimary} onClick={handleSubmit} disabled={submitting}>
-                        {submitting ? "Scheduling…" : "Schedule Pickup"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Right: mini history preview */}
-            <div style={S.colRight}>
-              <div style={S.card}>
-                <div style={S.cardTitle}>Recent Pickups</div>
-                <p style={S.cardSub}>Your latest scheduled pickups</p>
-                {myPickups.length === 0 ? (
-                  <div style={S.emptyBox}>
-                    <p style={S.emptyTxt}>No pickups yet.</p>
+                        <input
+                          type="checkbox"
+                          checked={form.wasteTypes.includes(wt)}
+                          onChange={() => toggleWasteType(wt)}
+                        />
+                        {wt}
+                      </label>
+                    ))}
                   </div>
-                ) : (
-                  myPickups.slice(0, 4).map(p => (
-                    <div key={p.id} style={S.histItem}>
-                      <div>
-                        <div style={S.histDate}>{p.pickupDate} · {p.timeSlot}</div>
-                        <div style={S.histMeta}>
-                          {Array.isArray(p.wasteTypes) ? p.wasteTypes.join(", ") : p.wasteType || "—"}
-                          {" · "}{p.city}
-                        </div>
-                        <div style={S.histAddr}>{p.address}</div>
-                      </div>
-                      <StatusPill status={p.status} />
-                    </div>
-                  ))
-                )}
+                </div>
+
+                <div className="sp-field">
+                  <label>Additional Notes</label>
+                  <p className="sp-help">
+                    Any special instructions for the pickup team (access, packaging, etc.)
+                  </p>
+                  <textarea
+                    value={form.additionalNotes}
+                    onChange={e => setForm(p => ({ ...p, additionalNotes: e.target.value }))}
+                    placeholder="e.g. Gate code is 1234, bags are near the entrance…"
+                  />
+                  <p className="sp-footnote">Write "N/A" if no special instructions.</p>
+                </div>
+
+                <div className="sp-actions-between">
+                  <button
+                    className="sp-secondary-btn"
+                    onClick={() => { setStep(1); setError(""); }}
+                    disabled={submitting}
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    className="sp-primary-btn"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                  >
+                    {submitting ? "Scheduling…" : "Schedule Pickup"}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -507,142 +429,165 @@ function SchedulePickup() {
             VOLUNTEER — Pickup History
         ══════════════════════════════════════════ */}
         {tab === "history" && role === "volunteer" && (
-          <div style={S.card}>
-            <div style={S.cardTitle}>Your Pickup History</div>
-            <p style={S.cardSub}>View and manage all your scheduled pickups</p>
+          <div className="sp-card">
+            <div className="sp-card-title">Your Pickup History</div>
+            <p className="sp-card-sub">View and manage all your scheduled pickups</p>
 
-            {myPickups.length === 0 ? (
-              <div style={S.emptyBox}>
-                <p style={S.emptyTxt}>You haven't scheduled any pickups yet.</p>
+            {loading ? (
+              <p className="sp-loading">Loading…</p>
+            ) : pickups.length === 0 ? (
+              <div className="sp-history-empty">
+                <p className="sp-history-empty-text">
+                  You haven't scheduled any pickups yet.
+                </p>
                 <button
-                  style={S.btnPrimary}
+                  className="sp-history-empty-btn"
                   onClick={() => { setTab("new"); setStep(1); }}
                 >
                   Schedule your first pickup
                 </button>
               </div>
             ) : (
-              myPickups.map(p => (
-                <div key={p.id} style={S.histItem}>
-                  <div>
-                    <div style={S.histDate}>{p.pickupDate} · {p.timeSlot}</div>
-                    <div style={S.histMeta}>
-                      {Array.isArray(p.wasteTypes) ? p.wasteTypes.join(", ") : p.wasteType || "—"}
-                      {" · "}{p.city}
+              <div className="sp-history-list">
+                {pickups.map(p => (
+                  <div key={p._id} className="sp-history-item">
+                    <div className="sp-history-left">
+                      <span className="sp-history-date">
+                        {p.pickupDate} · {p.timeSlot}
+                      </span>
+                      <span className="sp-history-meta">
+                        {displayWaste(p)} · {p.city}
+                      </span>
+                      <span className="sp-history-address">{p.address}</span>
+                      {p.assignedTo && (
+                        <span className="sp-history-agent">✓ Agent: {p.assignedTo}</span>
+                      )}
                     </div>
-                    <div style={S.histAddr}>{p.address}</div>
-                    {p.agentName && (
-                      <div style={{ fontSize: 12, color: "#16a34a", marginTop: 2 }}>
-                        Agent: {p.agentName}
-                      </div>
-                    )}
+                    <div className="sp-history-actions" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <StatusPill status={p.status} />
+                      {p.status === "pending" && (
+                        <button
+                          className="sp-secondary-btn"
+                          style={{ fontSize: 11, padding: "4px 10px" }}
+                          onClick={() => cancelPickup(p._id)}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <StatusPill status={p.status} />
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
 
         {/* ══════════════════════════════════════════
-            NGO — Manage Pickups (assign agents)
+            NGO — Manage Pickups
         ══════════════════════════════════════════ */}
         {tab === "manage" && role === "ngo" && (
           <div>
-            {/* Stats row */}
-            <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+            {/* Stats */}
+            <div className="sp-stats-row">
               {[
-                { label: "Total Requests", value: pickups.length,        color: "#2563eb" },
-                { label: "Pending",        value: pendingPickups.length,  color: "#b45309" },
-                { label: "Assigned",       value: pickups.filter(p => p.status === "assigned").length, color: "#16a34a" },
-                { label: "Agents Available", value: agents.length,       color: "#7c3aed" },
+                { label: "Total Requests",  value: pickups.length,                                           color: "#1f7a6b" },
+                { label: "Pending",         value: pendingPickups.length,                                    color: "#b45309" },
+                { label: "Accepted",        value: pickups.filter(p => p.status === "accepted").length,      color: "#166534" },
+                { label: "In Transit",      value: pickups.filter(p => p.status === "in-transit").length,    color: "#1d4ed8" },
               ].map(s => (
-                <div key={s.label} style={{
-                  flex: "1 1 140px", background: "#fff",
-                  border: "1px solid #e2e8f0", borderRadius: 8, padding: "16px 18px",
-                }}>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div key={s.label} className="sp-stat-card">
+                  <div className="sp-stat-value" style={{ color: s.color }}>{s.value}</div>
+                  <div className="sp-stat-label">{s.label}</div>
                 </div>
               ))}
             </div>
 
-            {error && <div style={S.error}>{error}</div>}
+            {error && <div className="sp-error">{error}</div>}
 
-            <div style={S.sectionLbl}>Pending requests</div>
-
-            {pendingPickups.length === 0 ? (
-              <div style={{ ...S.card, ...S.emptyBox }}>
-                <p style={S.emptyTxt}>All pickups have been assigned.</p>
-              </div>
+            {loading ? (
+              <p className="sp-loading">Loading…</p>
             ) : (
-              pendingPickups.map(p => (
-                <div key={p.id} style={S.card}>
-                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "#1e293b" }}>
-                        {p.userName || "Volunteer"}
-                      </div>
-                      <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
-                        {p.pickupDate} · {p.timeSlot}
-                      </div>
-                      <div style={{ fontSize: 13, color: "#64748b" }}>
-                        📍 {p.address}, {p.city}
-                      </div>
-                      <div style={{ fontSize: 13, color: "#64748b" }}>
-                        🗑 {Array.isArray(p.wasteTypes) ? p.wasteTypes.join(", ") : p.wasteType || "—"}
-                      </div>
-                      {p.additionalNotes && (
-                        <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4, fontStyle: "italic" }}>
-                          "{p.additionalNotes}"
-                        </div>
-                      )}
-                    </div>
-                    <StatusPill status={p.status} />
-                  </div>
-
-                  {/* Assign agent row */}
-                  <div style={S.assignRow}>
-                    <select
-                      style={S.assignSel}
-                      value={agentSel[p.id] || ""}
-                      onChange={e => setAgentSel(prev => ({ ...prev, [p.id]: e.target.value }))}
-                    >
-                      <option value="">Select an agent…</option>
-                      {agents.map(a => (
-                        <option key={a.id} value={a.id}>
-                          {a.name} — {a.area}
-                        </option>
-                      ))}
-                    </select>
-                    <button style={S.btnSm} onClick={() => assignAgent(p.id)}>
-                      Assign
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-
-            {/* Already-assigned section */}
-            {pickups.filter(p => p.status === "assigned").length > 0 && (
               <>
-                <div style={{ ...S.sectionLbl, marginTop: 24 }}>Assigned pickups</div>
-                {pickups.filter(p => p.status === "assigned").map(p => (
-                  <div key={p.id} style={{ ...S.card, opacity: 0.85 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: "#1e293b" }}>
-                          {p.userName || "Volunteer"}
-                        </div>
-                        <div style={{ fontSize: 13, color: "#64748b" }}>
-                          {p.pickupDate} · {p.timeSlot} · {p.city}
-                        </div>
-                        <div style={S.assignedTxt}>✓ Agent: {p.agentName}</div>
-                      </div>
-                      <StatusPill status={p.status} />
-                    </div>
+                <div className="sp-section-label">Pending Requests</div>
+
+                {pendingPickups.length === 0 ? (
+                  <div className="sp-card sp-empty-box">
+                    <p className="sp-history-empty-text">All pickups have been assigned.</p>
                   </div>
-                ))}
+                ) : (
+                  pendingPickups.map(p => (
+                    <div key={p._id} className="sp-card sp-manage-card">
+                      <div className="sp-manage-card-top">
+                        <div className="sp-manage-card-info">
+                          {/* volunteer is populated from backend */}
+                          <div className="sp-manage-volunteer">
+                            {p.volunteer?.name || "Volunteer"}
+                            {p.volunteer?.phone && (
+                              <span style={{ marginLeft: 8, fontWeight: 400, color: "#6b7280", fontSize: 12 }}>
+                                {p.volunteer.phone}
+                              </span>
+                            )}
+                          </div>
+                          <div className="sp-manage-detail">📅 {p.pickupDate} · {p.timeSlot}</div>
+                          <div className="sp-manage-detail">📍 {p.address}, {p.city}</div>
+                          <div className="sp-manage-detail">🗑 {displayWaste(p)}</div>
+                          {p.additionalNotes && (
+                            <div className="sp-manage-notes">"{p.additionalNotes}"</div>
+                          )}
+                        </div>
+                        <StatusPill status={p.status} />
+                      </div>
+
+                      {/* Agent assignment — free-text input (no more mock data) */}
+                      <div className="sp-assign-row">
+                        <input
+                          className="sp-assign-select"
+                          type="text"
+                          placeholder="Enter agent name…"
+                          value={agentInputs[p._id] || ""}
+                          onChange={e =>
+                            setAgentInputs(prev => ({ ...prev, [p._id]: e.target.value }))
+                          }
+                        />
+                        <button
+                          className="sp-primary-btn"
+                          onClick={() => assignAgent(p._id)}
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {/* Accepted / in-transit pickups */}
+                {pickups.filter(p => ["accepted", "in-transit"].includes(p.status)).length > 0 && (
+                  <>
+                    <div className="sp-section-label" style={{ marginTop: 28 }}>
+                      Active Pickups
+                    </div>
+                    {pickups
+                      .filter(p => ["accepted", "in-transit"].includes(p.status))
+                      .map(p => (
+                        <div key={p._id} className="sp-card sp-manage-card sp-manage-card--assigned">
+                          <div className="sp-manage-card-top">
+                            <div className="sp-manage-card-info">
+                              <div className="sp-manage-volunteer">
+                                {p.volunteer?.name || "Volunteer"}
+                              </div>
+                              <div className="sp-manage-detail">
+                                {p.pickupDate} · {p.timeSlot} · {p.city}
+                              </div>
+                              {p.assignedTo && (
+                                <div className="sp-assigned-agent">✓ Agent: {p.assignedTo}</div>
+                              )}
+                            </div>
+                            <StatusPill status={p.status} />
+                          </div>
+                        </div>
+                      ))}
+                  </>
+                )}
               </>
             )}
           </div>
@@ -652,35 +597,40 @@ function SchedulePickup() {
             NGO — All History
         ══════════════════════════════════════════ */}
         {tab === "history" && role === "ngo" && (
-          <div style={S.card}>
-            <div style={S.cardTitle}>All Pickup History</div>
-            <p style={S.cardSub}>Complete log of all pickup requests on the platform</p>
+          <div className="sp-card">
+            <div className="sp-card-title">All Pickup History</div>
+            <p className="sp-card-sub">
+              Complete log of all pickup requests on the platform
+            </p>
 
-            {pickups.length === 0 ? (
-              <div style={S.emptyBox}>
-                <p style={S.emptyTxt}>No pickups have been scheduled yet.</p>
+            {loading ? (
+              <p className="sp-loading">Loading…</p>
+            ) : pickups.length === 0 ? (
+              <div className="sp-history-empty">
+                <p className="sp-history-empty-text">No pickups have been scheduled yet.</p>
               </div>
             ) : (
-              pickups.map(p => (
-                <div key={p.id} style={S.histItem}>
-                  <div>
-                    <div style={S.histDate}>
-                      {p.userName || "Volunteer"} · {p.pickupDate} · {p.timeSlot}
+              <div className="sp-history-list">
+                {pickups.map(p => (
+                  <div key={p._id} className="sp-history-item">
+                    <div className="sp-history-left">
+                      <span className="sp-history-date">
+                        {p.volunteer?.name || "Volunteer"} · {p.pickupDate} · {p.timeSlot}
+                      </span>
+                      <span className="sp-history-meta">
+                        {displayWaste(p)} · {p.city}
+                      </span>
+                      <span className="sp-history-address">{p.address}</span>
+                      {p.assignedTo && (
+                        <span className="sp-history-agent">✓ Agent: {p.assignedTo}</span>
+                      )}
                     </div>
-                    <div style={S.histMeta}>
-                      {Array.isArray(p.wasteTypes) ? p.wasteTypes.join(", ") : p.wasteType || "—"}
-                      {" · "}{p.city}
+                    <div className="sp-history-actions">
+                      <StatusPill status={p.status} />
                     </div>
-                    <div style={S.histAddr}>{p.address}</div>
-                    {p.agentName && (
-                      <div style={{ fontSize: 12, color: "#16a34a", marginTop: 2 }}>
-                        Agent: {p.agentName}
-                      </div>
-                    )}
                   </div>
-                  <StatusPill status={p.status} />
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}

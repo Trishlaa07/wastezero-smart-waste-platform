@@ -111,3 +111,41 @@ exports.deleteNotification = async (req, res) => {
     res.status(500).json({ message: "Failed to delete notification" });
   }
 };
+
+exports.createSupportMessage = async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+
+    const newMsg = await Support.create({
+      user: req.user.id,
+      subject,
+      message,
+      status: "pending"
+    });
+
+    // ✅ FIND ADMIN
+    const admin = await User.findOne({ role: "admin" });
+
+    // ✅ CREATE NOTIFICATION
+    await Notification.create({
+      user: admin._id,
+      type: "support",
+      message: `New support request: ${subject}`,
+      relatedId: newMsg._id
+    });
+
+    // ✅ SOCKET EMIT (REAL-TIME)
+    const io = req.app.get("io"); // make sure io is set in server
+    io.to(admin._id.toString()).emit("newNotification", {
+      type: "support",
+      message: `New support request: ${subject}`,
+      _id: new Date().getTime(),
+      createdAt: new Date()
+    });
+
+    res.json(newMsg);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

@@ -2,18 +2,40 @@ import Layout from "../../components/Layout";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useSocket } from "../../context/SocketContext";
 import {
   FileText, Clock, CheckCircle, XCircle,
-  Search, User, Globe, MapPin
+  Search, User, Globe, MapPin, Package, Calendar,
 } from "lucide-react";
 import "../../styles/dashboard.css";
 import "../../styles/volunteerDashboard.css";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
 
+function PickupStatusPill({ status }) {
+  const map = {
+    pending:      { bg: "#fef3c7", color: "#92400e" },
+    accepted:     { bg: "#dcfce7", color: "#166534" },
+    "in-transit": { bg: "#dbeafe", color: "#1e40af" },
+    completed:    { bg: "#f3f4f6", color: "#374151" },
+    cancelled:    { bg: "#fee2e2", color: "#991b1b" },
+  };
+  const s = map[status] || map.pending;
+  return (
+    <span style={{
+      padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+      background: s.bg, color: s.color, textTransform: "capitalize",
+      whiteSpace: "nowrap", flexShrink: 0,
+    }}>
+      {status}
+    </span>
+  );
+}
+
 function VolunteerDashboard() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const token    = localStorage.getItem("token");
+  const socket   = useSocket();
 
   const storedUser = (() => {
     try { return JSON.parse(localStorage.getItem("user")); }
@@ -22,7 +44,8 @@ function VolunteerDashboard() {
 
   const [applications,  setApplications]  = useState([]);
   const [opportunities, setOpportunities] = useState([]);
-  const [freshUser,     setFreshUser]     = useState(null); // ✅ live from DB
+  const [pickups,       setPickups]       = useState([]);
+  const [freshUser,     setFreshUser]     = useState(null);
   const [loading,       setLoading]       = useState(true);
 
   useEffect(() => {
@@ -35,12 +58,9 @@ function VolunteerDashboard() {
 
   const fetchAll = async () => {
     try {
-      // ✅ fetch apps + opps together
       const [appsRes, oppsRes] = await Promise.all([
-        axios.get(`${API}/api/applications/volunteer`,
-          { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/api/opportunities/matched`,
-          { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/api/applications/volunteer`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/api/opportunities/matched`,  { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       setApplications(appsRes.data  || []);
       setOpportunities(oppsRes.data || []);
@@ -48,54 +68,98 @@ function VolunteerDashboard() {
       console.log("fetchAll error:", err);
     }
 
-    // ✅ fetch fresh profile separately so it never breaks the other calls
     try {
-      const profileRes = await axios.get(`${API}/api/auth/me`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const pickupsRes = await axios.get(`${API}/api/pickups`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPickups(Array.isArray(pickupsRes.data) ? pickupsRes.data : []);
+    } catch {
+      setPickups([]);
+    }
+
+    try {
+      const profileRes = await axios.get(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const user = profileRes.data;
       setFreshUser(user);
-      // ✅ keep localStorage in sync for navbar/sidebar
       localStorage.setItem("user", JSON.stringify({ ...storedUser, ...user }));
     } catch (err) {
       console.log("profile fetch error:", err.message);
-      // silently falls back to storedUser
     }
 
     setLoading(false);
   };
 
-  // ✅ always prefer live DB data over stale localStorage
+  // ── Real-time: new pickup (only if it belongs to this user) ──
+  useEffect(() => {
+    if (!socket) return;
+    const myId = (storedUser?._id || storedUser?.id)?.toString();
+    const handleNew = (newPickup) => {
+      const volunteerId =
+        typeof newPickup.volunteer === "object"
+          ? (newPickup.volunteer._id || newPickup.volunteer.id)?.toString()
+          : newPickup.volunteer?.toString();
+      if (myId && volunteerId !== myId) return;
+      setPickups(prev => {
+        if (prev.find(p => p._id === newPickup._id)) return prev;
+        return [newPickup, ...prev];
+      });
+    };
+    socket.on("newPickup", handleNew);
+    return () => socket.off("newPickup", handleNew);
+  }, [socket, storedUser]);
+
+  // ── Real-time: pickup status/agent updated by NGO ──
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdated = (updated) => {
+      setPickups(prev =>
+        prev.map(p => p._id === updated._id ? { ...p, ...updated } : p)
+      );
+    };
+    socket.on("pickupUpdated", handleUpdated);
+    return () => socket.off("pickupUpdated", handleUpdated);
+  }, [socket]);
+
   const user = freshUser || storedUser;
 
   /* ── Profile completion ── */
   const profileFields = [
-    { label: "Name",     done: !!(user?.name     && String(user.name).trim()     !== "") },
-    { label: "Bio",      done: !!(user?.bio       && String(user.bio).trim()      !== "") },
-    { label: "Skills",   done: !!(user?.skills    && user.skills.length           >  0)  },
-    { label: "Location", done: !!(user?.location  && String(user.location).trim() !== "") },
-    { label: "Phone",    done: !!(user?.phone     && String(user.phone).trim()    !== "") },
+    { label: "Name",     done: !!(user?.name    && String(user.name).trim()    !== "") },
+    { label: "Bio",      done: !!(user?.bio      && String(user.bio).trim()     !== "") },
+    { label: "Skills",   done: !!(user?.skills   && user.skills.length          >  0)  },
+    { label: "Location", done: !!(user?.location && String(user.location).trim() !== "") },
+    { label: "Phone",    done: !!(user?.phone    && String(user.phone).trim()   !== "") },
   ];
-
   const filled     = profileFields.filter(f => f.done).length;
   const profilePct = Math.round((filled / profileFields.length) * 100);
   const missing    = profileFields.filter(f => !f.done).map(f => f.label);
 
-  /* ── Stats ── */
+  /* ── Application stats ── */
   const total    = applications.length;
   const pending  = applications.filter(a => a.status === "pending").length;
   const accepted = applications.filter(a => a.status === "accepted").length;
   const rejected = applications.filter(a => a.status === "rejected").length;
+
+  /* ── Pickup stats ── */
+  const pickupTotal     = pickups.length;
+  const pickupPending   = pickups.filter(p => p.status === "pending").length;
+  const pickupAccepted  = pickups.filter(p => p.status === "accepted").length;
+  const pickupCompleted = pickups.filter(p => p.status === "completed").length;
+
   const totalOpps = opportunities.length;
   const topOpps   = [...opportunities]
     .sort((a, b) => (b.skillMatch || 0) - (a.skillMatch || 0))
     .slice(0, 3);
 
+  const recentPickups = [...pickups]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 3);
+
   if (loading) return (
     <Layout>
-      <p style={{ padding: 40, color: "var(--text-secondary)", fontSize: 14 }}>
-        Loading...
-      </p>
+      <p style={{ padding: 40, color: "var(--text-secondary)", fontSize: 14 }}>Loading...</p>
     </Layout>
   );
 
@@ -107,9 +171,7 @@ function VolunteerDashboard() {
         <div className="vol-header">
           <div>
             <h2 className="dashboard-title">Volunteer Dashboard</h2>
-            <p className="dashboard-welcome">
-              Welcome, <strong>{user?.name}</strong>
-            </p>
+            <p className="dashboard-welcome">Welcome, <strong>{user?.name}</strong></p>
           </div>
           <button className="vol-browse-btn" onClick={() => navigate("/opportunities")}>
             <Search size={14} /> Browse Opportunities
@@ -124,22 +186,17 @@ function VolunteerDashboard() {
               <span className="vol-profile-pct">{profilePct}%</span>
             </div>
             <div className="vol-profile-bar-track">
-              <div
-                className="vol-profile-bar-fill"
-                style={{ width: `${profilePct}%` }}
-              />
+              <div className="vol-profile-bar-fill" style={{ width: `${profilePct}%` }} />
             </div>
-            {/* ✅ shows exactly what's missing */}
             <p className="vol-profile-bar-hint">
               {missing.length > 0
                 ? `Missing: ${missing.join(", ")} — click to complete →`
-                : "Almost there! A complete profile gets 3× more matches →"
-              }
+                : "Almost there! A complete profile gets 3× more matches →"}
             </p>
           </div>
         )}
 
-        {/* KPI CARDS */}
+        {/* APPLICATION KPI CARDS */}
         <div className="dashboard-grid">
           <div className="vol-stat-card blue">
             <div className="vol-stat-icon"><FileText size={18} /></div>
@@ -178,9 +235,40 @@ function VolunteerDashboard() {
           </div>
         </div>
 
+        {/* PICKUP KPI CARDS */}
+        <div className="dashboard-grid" style={{ marginTop: 0 }}>
+          <div className="vol-stat-card teal">
+            <div className="vol-stat-icon"><Package size={18} /></div>
+            <div>
+              <p className="vol-stat-label">Total Pickups</p>
+              <p className="vol-stat-value">{pickupTotal}</p>
+            </div>
+          </div>
+          <div className="vol-stat-card amber">
+            <div className="vol-stat-icon"><Clock size={18} /></div>
+            <div>
+              <p className="vol-stat-label">Awaiting Agent</p>
+              <p className="vol-stat-value">{pickupPending}</p>
+            </div>
+          </div>
+          <div className="vol-stat-card blue">
+            <div className="vol-stat-icon"><CheckCircle size={18} /></div>
+            <div>
+              <p className="vol-stat-label">Agent Assigned</p>
+              <p className="vol-stat-value">{pickupAccepted}</p>
+            </div>
+          </div>
+          <div className="vol-stat-card green">
+            <div className="vol-stat-icon"><CheckCircle size={18} /></div>
+            <div>
+              <p className="vol-stat-label">Completed</p>
+              <p className="vol-stat-value">{pickupCompleted}</p>
+            </div>
+          </div>
+        </div>
+
         {/* TOP MATCHES + QUICK ACTIONS */}
         <div className="vol-dashboard-section">
-
           <div className="vol-chart-box">
             <h3>Top Matched Opportunities</h3>
             {topOpps.length === 0 ? (
@@ -213,10 +301,8 @@ function VolunteerDashboard() {
                     <div
                       className="vol-match-score"
                       style={{
-                        background: opp.skillMatch >= 70 ? "#d1fae5"
-                          : opp.skillMatch >= 40 ? "#fef3c7" : "#f3f4f6",
-                        color: opp.skillMatch >= 70 ? "#065f46"
-                          : opp.skillMatch >= 40 ? "#92400e" : "#6b7280",
+                        background: opp.skillMatch >= 70 ? "#d1fae5" : opp.skillMatch >= 40 ? "#fef3c7" : "#f3f4f6",
+                        color:      opp.skillMatch >= 70 ? "#065f46" : opp.skillMatch >= 40 ? "#92400e" : "#6b7280",
                       }}
                     >
                       {opp.skillMatch || 0}% match
@@ -241,8 +327,70 @@ function VolunteerDashboard() {
             <button onClick={() => navigate("/profile")}>
               <User size={15} /> Update Profile
             </button>
+            <button onClick={() => navigate("/schedule")}>      {/* ← fixed path */}
+              <Package size={15} /> Schedule Pickup
+            </button>
+          </div>
+        </div>
+
+        {/* RECENT PICKUPS */}
+        <div className="vol-recent-applications" style={{ marginBottom: 20 }}>
+          <div className="vol-card-header">
+            <h3>Recent Pickups</h3>
+            <button
+              className="vol-link-btn"
+              style={{ fontSize: 13 }}
+              onClick={() => navigate("/schedule")}   /* ← fixed path */
+            >
+              {recentPickups.length === 0 ? "Schedule a pickup →" : "View all →"}
+            </button>
           </div>
 
+          {recentPickups.length === 0 ? (
+            <p className="vol-empty">
+              No pickups scheduled yet.{" "}
+              <button className="vol-link-btn" onClick={() => navigate("/schedule")}>
+                Schedule your first pickup →
+              </button>
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date &amp; Time</th>
+                  <th>Waste Types</th>
+                  <th>Location</th>
+                  <th>Agent</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentPickups.map(p => (
+                  <tr key={p._id || p.id}>
+                    <td>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Calendar size={13} color="#9ca3af" />
+                        {p.pickupDate} · {p.timeSlot}
+                      </span>
+                    </td>
+                    <td>
+                      {Array.isArray(p.wasteTypes) ? p.wasteTypes.join(", ") : p.wasteType || "—"}
+                    </td>
+                    <td>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <MapPin size={13} color="#9ca3af" />
+                        {p.city}
+                      </span>
+                    </td>
+                    <td style={{ color: p.assignedTo ? "#166534" : "#9ca3af", fontSize: 12 }}>
+                      {p.assignedTo || "—"}
+                    </td>
+                    <td><PickupStatusPill status={p.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* RECENT APPLICATIONS */}
@@ -271,9 +419,7 @@ function VolunteerDashboard() {
                   <tr key={app._id}>
                     <td>{app.opportunity?.title || "—"}</td>
                     <td>
-                      <span className={`vol-status ${app.status}`}>
-                        {app.status}
-                      </span>
+                      <span className={`vol-status ${app.status}`}>{app.status}</span>
                     </td>
                     <td>{new Date(app.createdAt).toLocaleDateString()}</td>
                   </tr>

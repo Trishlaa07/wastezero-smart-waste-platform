@@ -1,16 +1,19 @@
 import { useState } from "react";
-import API from "../services/api";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Eye, EyeOff, ShieldOff } from "lucide-react";
+import { Eye, EyeOff, ShieldOff, Truck, BarChart2, Users } from "lucide-react";
+import API from "../services/api";
 import WasteZeroLogo from "../components/WasteZeroLogo";
 import "../styles/auth.css";
 
-function Login() {
+const FEATURES = [
+  { icon: <Truck size={16} />,     title: "Schedule Pickups",  desc: "Easily arrange waste collection" },
+  { icon: <BarChart2 size={16} />, title: "Track Impact",      desc: "Monitor your environmental contribution" },
+  { icon: <Users size={16} />,     title: "Volunteer",         desc: "Join recycling initiatives" },
+];
 
+export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // ✅ If kicked out via socket, location.state will carry the suspended reason
   const navState = location.state;
 
   const [form,          setForm]          = useState({ email: "", password: "" });
@@ -22,7 +25,7 @@ function Login() {
   );
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setGeneralError("");
     setSuspendReason("");
   };
@@ -32,113 +35,128 @@ function Login() {
     setLoading(true);
     setGeneralError("");
     setSuspendReason("");
-
     try {
       const res = await API.post("/auth/login", form);
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("user",  JSON.stringify(res.data.user));
       navigate("/dashboard");
-    } catch (error) {
-      if (error.response?.status === 403) {
-        // Suspended on login attempt
-        setSuspendReason(
-          error.response.data.reason || "Platform policy violation"
-        );
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setSuspendReason(err.response.data.reason || "Platform policy violation");
       } else {
         setGeneralError("Invalid email or password");
       }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <div className="auth-wrapper">
 
-      {/* LEFT PANEL */}
+      {/* LEFT */}
       <div className="auth-left">
         <div className="brand">
-          <WasteZeroLogo size={42} />
-          <h1>WasteZero</h1>
+          <div className="brand-logo-row">
+            <WasteZeroLogo size={36} />
+            <h1>WasteZero</h1>
+          </div>
           <h2>Join the Recycling Revolution</h2>
           <p>
             WasteZero connects volunteers, NGOs, and administrators
             to schedule pickups, manage recycling opportunities,
-            and create environmental impact.
+            and create lasting environmental impact.
           </p>
           <div className="features">
-            <div><h4>Schedule Pickups</h4><p>Easily arrange waste collection</p></div>
-            <div><h4>Track Impact</h4><p>Monitor environmental contribution</p></div>
-            <div><h4>Volunteer</h4><p>Join recycling initiatives</p></div>
+            {FEATURES.map((f) => (
+              <div className="feature-item" key={f.title}>
+                <div className="feature-icon">{f.icon}</div>
+                <div className="feature-text">
+                  <h4>{f.title}</h4>
+                  <p>{f.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* RIGHT PANEL */}
+      {/* RIGHT */}
       <div className="auth-right">
-        <div className="auth-container">
+        <div className="auth-card">
 
           <div className="tabs">
             <button className="active">Login</button>
             <button onClick={() => navigate("/register")}>Register</button>
           </div>
 
-          <h3>Welcome Back</h3>
-          <p className="subtitle">Login to continue using WasteZero</p>
+          <h3>Welcome back</h3>
+          <p className="subtitle">Sign in to continue using WasteZero</p>
 
-          {/* Simple invalid credentials error */}
-          {generalError && (
-            <p className="error-text">{generalError}</p>
-          )}
+          {generalError && <div className="submit-error">{generalError}</div>}
 
-          {/* ✅ Inline suspended banner — shown on manual login attempt OR auto-kick */}
           {suspendReason && (
             <div className="suspended-banner">
               <div className="suspended-banner-top">
-                <ShieldOff size={15} />
+                <ShieldOff size={14} />
                 <span>Account Suspended</span>
               </div>
-              <p className="suspended-banner-reason">
-                Reason: {suspendReason}
-              </p>
+              <p className="suspended-banner-reason">Reason: {suspendReason}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={handleSubmit}>
 
-            <input
-              name="email"
-              type="email"
-              placeholder="Email"
-              onChange={handleChange}
-              required
-            />
-
-            <div className="password-field">
+            <div className="field-group">
+              <label className="field-label">Email</label>
               <input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                className="auth-input"
+                name="email"
+                type="email"
+                placeholder="jane@example.com"
                 onChange={handleChange}
                 required
               />
-              <span onClick={() => setShowPassword(!showPassword)}>
-                {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
-              </span>
             </div>
 
-            <p
-              style={{ textAlign: "right", fontSize: "13px", color: "#134e5e", cursor: "pointer" }}
-              onClick={() => navigate("/forgot-password")}
-            >
-              Forgot password?
-            </p>
+            <div className="field-group">
+              <label className="field-label">Password</label>
+              <div className="password-field">
+                <input
+                  className="auth-input"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Your password"
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
+                </button>
+              </div>
+            </div>
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
+            <div className="forgot-row">
+              <button type="button" className="auth-link" onClick={() => navigate("/forgot-password")}>
+                Forgot password?
+              </button>
+            </div>
+
+            <button className="btn-primary" type="submit" disabled={loading}>
+              {loading ? "Signing in…" : "Login"}
             </button>
 
           </form>
+
+          <p className="auth-divider">
+            Don't have an account?{" "}
+            <button className="auth-link" onClick={() => navigate("/register")}>Register</button>
+          </p>
 
         </div>
       </div>
@@ -146,5 +164,3 @@ function Login() {
     </div>
   );
 }
-
-export default Login;

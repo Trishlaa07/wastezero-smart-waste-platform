@@ -5,7 +5,7 @@ import {
   MessageCircle, Sprout, User, Settings,
   HelpCircle, Shield, Users, BarChart3,
   Trash2, PanelLeftClose, PanelLeftOpen,
-  ChevronRight, Menu, X,
+  ChevronRight, Menu, X, PackageCheck,
 } from "lucide-react";
 import WasteZeroLogo from "../components/WasteZeroLogo";
 import "../styles/Sidebar.css";
@@ -19,12 +19,10 @@ function Sidebar() {
   const role = user?.role;
   const name = user?.name;
 
-  // Close mobile sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  // Close mobile sidebar on outside click / resize
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) setMobileOpen(false);
@@ -55,7 +53,6 @@ function Sidebar() {
       <div className="sidebar-brand">
         <WasteZeroLogo size={32} />
         <h2 className="brand-text">Waste<span>Zero</span></h2>
-        {/* Desktop collapse button */}
         <button
           className="collapse-btn desktop-only"
           onClick={() => setCollapsed(c => !c)}
@@ -63,7 +60,6 @@ function Sidebar() {
         >
           {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
         </button>
-        {/* Mobile close button */}
         <button
           className="collapse-btn mobile-only"
           onClick={() => setMobileOpen(false)}
@@ -101,7 +97,7 @@ function Sidebar() {
           <>
             <p className="menu-title">Main Menu</p>
             {menuItem("/ngo-dashboard",      <LayoutDashboard size={18} />, "Dashboard")}
-            {menuItem("/create-opportunity", <Briefcase       size={18} />, "Create Opportunity")}
+            {menuItem("/manage-pickups",     <PackageCheck    size={18} />, "Manage Pickups")}
             {menuItem("/opportunities",      <Briefcase       size={18} />, "Manage Opportunities")}
             {menuItem("/applications",       <Users           size={18} />, "Applications")}
             {menuItem("/messages",           <MessageCircle   size={18} />, "Chat")}
@@ -115,6 +111,7 @@ function Sidebar() {
             {menuItem("/reports",          <BarChart3       size={18} />, "Reports & Analytics")}
             {menuItem("/moderation",       <Trash2          size={18} />, "Remove Bad Posts")}
             {menuItem("/platform-health",  <Shield          size={18} />, "Platform Control")}
+            {menuItem("/admin/support",    <MessageCircle   size={18} />, "Support Requests")}
           </>
         )}
       </nav>
@@ -132,7 +129,6 @@ function Sidebar() {
 
   return (
     <>
-      {/* ── MOBILE HAMBURGER (outside sidebar) ── */}
       <button
         className="mobile-hamburger"
         onClick={() => setMobileOpen(true)}
@@ -141,7 +137,6 @@ function Sidebar() {
         <Menu size={20} />
       </button>
 
-      {/* ── MOBILE OVERLAY ── */}
       {mobileOpen && (
         <div
           className="sidebar-overlay"
@@ -149,7 +144,6 @@ function Sidebar() {
         />
       )}
 
-      {/* ── SIDEBAR ── */}
       <div className={`sidebar ${collapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
         {sidebarContent}
       </div>

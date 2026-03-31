@@ -260,6 +260,7 @@ function CreateOpportunity() {
             value={form.date}
             onChange={handleChange}
             required
+            min={new Date().toISOString().split("T")[0]}
             style={{ marginBottom: 18, marginTop: 6 }}
           />
 

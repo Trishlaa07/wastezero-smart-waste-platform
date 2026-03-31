@@ -8,219 +8,126 @@ import "../styles/profile.css";
 
 function Profile() {
   const [activeTab, setActiveTab] = useState("profile");
-  const [editMode, setEditMode] = useState(false);
+  const [editMode,  setEditMode]  = useState(false);
 
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    location: "",
-    skills: [],
-    bio: "",
+    name: "", email: "", phone: "", location: "", skills: [], bio: "",
   });
 
-  const [skillsInput, setSkillsInput] = useState("");
-  const [phoneError, setPhoneError] = useState("");
+  const [skillsInput,  setSkillsInput]  = useState("");
+  const [phoneError,   setPhoneError]   = useState("");
 
   const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    currentPassword: "", newPassword: "", confirmPassword: "",
   });
-
   const [passwordErrors, setPasswordErrors] = useState({});
   const [isCurrentValid, setIsCurrentValid] = useState(false);
 
   const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
+  const [showNew,     setShowNew]     = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [error, setError] = useState("");
+  const [error,   setError]   = useState("");
   const [success, setSuccess] = useState("");
 
-  /* ================= AUTO CLEAR SUCCESS ================= */
+  /* ── Auto-clear success ── */
   useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(""), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!success) return;
+    const t = setTimeout(() => setSuccess(""), 3000);
+    return () => clearTimeout(t);
   }, [success]);
 
-  /* ================= FETCH PROFILE ================= */
+  /* ── Fetch profile ── */
   useEffect(() => {
     const localUser = JSON.parse(localStorage.getItem("user"));
-
     const fetchProfile = async () => {
       try {
-        const res = await API.get("/users/profile");
+        const res  = await API.get("/users/profile");
         const data = res.data;
-
         const skillsArray = Array.isArray(data.skills) ? data.skills : [];
-
         setForm({
-          name: data.name || "",
-          email: data.email || "",
-          phone: data.phone || "",
+          name:     data.name     || "",
+          email:    data.email    || "",
+          phone:    data.phone    || "",
           location: data.location || "",
-          skills: skillsArray,
-          bio: data.bio || "",
+          skills:   skillsArray,
+          bio:      data.bio      || "",
         });
-
         setSkillsInput(skillsArray.join(", "));
-
-        // ✅ Save ALL profile fields to localStorage, not just name + email
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            ...localUser,
-            name: data.name || "",
-            email: data.email || "",
-            phone: data.phone || "",
-            location: data.location || "",
-            skills: skillsArray,
-            bio: data.bio || "",
-          })
-        );
-      } catch (err) {
+        localStorage.setItem("user", JSON.stringify({
+          ...localUser,
+          name: data.name || "", email: data.email || "",
+          phone: data.phone || "", location: data.location || "",
+          skills: skillsArray, bio: data.bio || "",
+        }));
+      } catch {
         setError("Failed to load profile");
       }
     };
-
     fetchProfile();
   }, []);
 
-  /* ================= HANDLE INPUT ================= */
+  /* ── Handlers ── */
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === "skills") {
-      setSkillsInput(value);
-      return;
-    }
-
+    if (name === "skills") { setSkillsInput(value); return; }
     setForm({ ...form, [name]: value });
   };
 
-  /* ================= SAVE PROFILE ================= */
   const saveChanges = async () => {
     try {
-      setError("");
-      setSuccess("");
-
-      if (phoneError) {
-        setError("Please fix phone number before saving");
-        return;
-      }
-
-      // Parse the skills string into an array
-      const updatedSkills = skillsInput
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s !== "");
-
-      const updatedForm = {
-        ...form,
-        skills: updatedSkills,
-      };
-
+      setError(""); setSuccess("");
+      if (phoneError) { setError("Please fix phone number before saving"); return; }
+      const updatedSkills = skillsInput.split(",").map(s => s.trim()).filter(Boolean);
+      const updatedForm   = { ...form, skills: updatedSkills };
       const res = await API.put("/users/profile", updatedForm);
-
       setSuccess(res.data.message || "Profile updated successfully");
       setEditMode(false);
-
-      // Update form state with parsed skills so UI stays in sync
-      setForm((prev) => ({ ...prev, skills: updatedSkills }));
-
+      setForm(prev => ({ ...prev, skills: updatedSkills }));
       const existingUser = JSON.parse(localStorage.getItem("user"));
-
-      // ✅ Save ALL profile fields to localStorage, not just name + email
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...existingUser,
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          location: form.location,
-          skills: updatedSkills, // use the parsed array, not form.skills (stale)
-          bio: form.bio,
-        })
-      );
+      localStorage.setItem("user", JSON.stringify({
+        ...existingUser, name: form.name, email: form.email,
+        phone: form.phone, location: form.location,
+        skills: updatedSkills, bio: form.bio,
+      }));
     } catch (err) {
       setError(err.response?.data?.message || "Update failed");
     }
   };
 
-  /* ================= PASSWORD ================= */
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    const updatedForm = { ...passwordForm, [name]: value };
-    setPasswordForm(updatedForm);
-
-    let errors = {};
-
-    if (
-      updatedForm.confirmPassword &&
-      updatedForm.newPassword !== updatedForm.confirmPassword
-    ) {
+    const updated = { ...passwordForm, [name]: value };
+    setPasswordForm(updated);
+    const errors = {};
+    if (updated.confirmPassword && updated.newPassword !== updated.confirmPassword)
       errors.confirmPassword = "Passwords do not match";
-    }
-
     setPasswordErrors(errors);
   };
 
   const verifyCurrentPassword = async () => {
-    if (!passwordForm.currentPassword) {
-      setIsCurrentValid(false);
-      return;
-    }
-
+    if (!passwordForm.currentPassword) { setIsCurrentValid(false); return; }
     try {
-      await API.post("/users/verify-password", {
-        currentPassword: passwordForm.currentPassword,
-      });
-
-      setPasswordErrors((prev) => ({
-        ...prev,
-        currentPassword: "",
-      }));
-
+      await API.post("/users/verify-password", { currentPassword: passwordForm.currentPassword });
+      setPasswordErrors(prev => ({ ...prev, currentPassword: "" }));
       setIsCurrentValid(true);
     } catch {
-      setPasswordErrors((prev) => ({
-        ...prev,
-        currentPassword: "Current password is incorrect",
-      }));
-
+      setPasswordErrors(prev => ({ ...prev, currentPassword: "Current password is incorrect" }));
       setIsCurrentValid(false);
     }
   };
 
   const changePassword = async () => {
-    setError("");
-    setSuccess("");
-
-    if (!isCurrentValid) {
-      setError("Please enter correct current password");
-      return;
-    }
-
+    setError(""); setSuccess("");
+    if (!isCurrentValid) { setError("Please enter correct current password"); return; }
     if (passwordErrors.confirmPassword) return;
-
     try {
       const res = await API.put("/users/change-password", {
         currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
+        newPassword:     passwordForm.newPassword,
       });
-
       setSuccess(res.data.message);
-
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       setPasswordErrors({});
       setIsCurrentValid(false);
     } catch (err) {
@@ -228,198 +135,251 @@ function Profile() {
     }
   };
 
+  /* ── Profile completion ── */
+  const profileFields = [
+    { label: "Name",     done: !!form.name.trim()     },
+    { label: "Bio",      done: !!form.bio.trim()      },
+    { label: "Skills",   done: form.skills.length > 0 },
+    { label: "Location", done: !!form.location.trim() },
+    { label: "Phone",    done: !!form.phone.trim()    },
+  ];
+  const filled     = profileFields.filter(f => f.done).length;
+  const profilePct = Math.round((filled / profileFields.length) * 100);
+
   return (
     <Layout>
-      <div className="profile-container">
-        <h1>My Profile</h1>
-        <p className="subtitle">
-          Manage your account information and settings
-        </p>
+      <div className="pf-page">
 
-        <div className="tabs">
+        {/* ── Header ── */}
+        <div className="pf-header">
+          <h1 className="pf-title">My Profile</h1>
+          <p className="pf-sub">Manage your account information and settings</p>
+        </div>
+
+        {/* ── Tabs ── */}
+        <div className="pf-tabs">
           <button
-            className={activeTab === "profile" ? "active-tab" : ""}
+            className={`pf-tab${activeTab === "profile" ? " active" : ""}`}
             onClick={() => setActiveTab("profile")}
           >
             Profile
           </button>
           <button
-            className={activeTab === "password" ? "active-tab" : ""}
+            className={`pf-tab${activeTab === "password" ? " active" : ""}`}
             onClick={() => setActiveTab("password")}
           >
             Password
           </button>
         </div>
 
-        {/* ================= PROFILE TAB ================= */}
+        {/* ════════════════════════════
+            PROFILE TAB
+        ════════════════════════════ */}
         {activeTab === "profile" && (
-          <div className="profile-box">
-            <h3>Personal Information</h3>
+          <div className="pf-card">
+            <div className="pf-card-header">
+              <div>
+                <div className="pf-card-title">Personal Information</div>
+                <div className="pf-card-sub">Keep your details up to date</div>
+              </div>
+              {!editMode ? (
+                <button className="pf-edit-btn" onClick={() => setEditMode(true)}>
+                  Edit Profile
+                </button>
+              ) : (
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    className="pf-cancel-btn"
+                    onClick={() => { setEditMode(false); setError(""); }}
+                  >
+                    Cancel
+                  </button>
+                  <button className="pf-save-btn" onClick={saveChanges}>
+                    Save Changes
+                  </button>
+                </div>
+              )}
+            </div>
 
-            {error && <p className="error-msg">{error}</p>}
-            {success && <p className="success-msg">{success}</p>}
+            {error   && <div className="pf-error">{error}</div>}
+            {success && <div className="pf-success">{success}</div>}
 
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Full Name</label>
+            <div className="pf-form-grid">
+
+              <div className="pf-field">
+                <label className="pf-label">Full Name</label>
                 <input
+                  className="pf-input"
                   name="name"
                   value={form.name}
                   readOnly={!editMode}
                   onChange={handleChange}
+                  placeholder="Your full name"
                 />
               </div>
 
-              <div className="form-group">
-                <label>Email</label>
-                <input name="email" value={form.email} readOnly />
+              <div className="pf-field">
+                <label className="pf-label">Email</label>
+                <input
+                  className="pf-input"
+                  name="email"
+                  value={form.email}
+                  readOnly
+                  placeholder="your@email.com"
+                />
               </div>
 
-              <div className="form-group">
-                <label>Phone</label>
-
+              <div className="pf-field">
+                <label className="pf-label">Phone</label>
                 <PhoneInput
                   country={"in"}
                   value={form.phone}
                   onChange={(value, data) => {
                     setForm({ ...form, phone: value });
-
-                    const numberPart = value.slice(data.dialCode.length);
-
-                    if (numberPart.length !== 10) {
-                      setPhoneError("Phone number must be exactly 10 digits");
-                    } else {
-                      setPhoneError("");
-                    }
+                    const digits = value.slice(data.dialCode.length);
+                    setPhoneError(digits.length !== 10 ? "Phone number must be exactly 10 digits" : "");
                   }}
                   disabled={!editMode}
-                  inputClass="phone-input"
-                  containerClass="phone-container"
+                  inputClass="pf-phone-input"
+                  containerClass="pf-phone-container"
                 />
-
-                {phoneError && (
-                  <p className="field-error">{phoneError}</p>
-                )}
+                {phoneError && <p className="pf-field-error">{phoneError}</p>}
               </div>
 
-              <div className="form-group">
-                <label>Location</label>
+              <div className="pf-field">
+                <label className="pf-label">Location</label>
                 <input
+                  className="pf-input"
                   name="location"
                   value={form.location}
                   readOnly={!editMode}
                   onChange={handleChange}
+                  placeholder="City, State"
                 />
               </div>
 
-              <div className="form-group full-width">
-                <label>Skills (comma separated)</label>
+              <div className="pf-field pf-full">
+                <label className="pf-label">Skills <span className="pf-label-hint">(comma separated)</span></label>
                 <input
+                  className="pf-input"
                   name="skills"
                   value={skillsInput}
                   readOnly={!editMode}
                   onChange={handleChange}
+                  placeholder="e.g. Teaching, First Aid, Driving"
                 />
               </div>
 
-              <div className="form-group full-width">
-                <label>Bio</label>
+              <div className="pf-field pf-full">
+                <label className="pf-label">Bio</label>
                 <textarea
+                  className="pf-input pf-textarea"
                   name="bio"
                   value={form.bio}
                   readOnly={!editMode}
                   onChange={handleChange}
+                  placeholder="Tell us a little about yourself…"
                 />
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════
+            PASSWORD TAB
+        ════════════════════════════ */}
+        {activeTab === "password" && (
+          <div className="pf-card">
+            <div className="pf-card-header">
+              <div>
+                <div className="pf-card-title">Change Password</div>
+                <div className="pf-card-sub">Keep your account secure</div>
               </div>
             </div>
 
-            {!editMode ? (
-              <button
-                className="primary-btn"
-                onClick={() => setEditMode(true)}
-              >
-                Edit Profile
-              </button>
-            ) : (
-              <button
-                className="primary-btn"
-                onClick={saveChanges}
-              >
-                Save Changes
-              </button>
-            )}
+            {error   && <div className="pf-error">{error}</div>}
+            {success && <div className="pf-success">{success}</div>}
+
+            <div className="pf-pw-stack">
+
+              <div className="pf-field">
+                <label className="pf-label">Current Password</label>
+                <div className="pf-pw-row">
+                  <input
+                    className="pf-input"
+                    type={showCurrent ? "text" : "password"}
+                    name="currentPassword"
+                    value={passwordForm.currentPassword}
+                    onChange={handlePasswordChange}
+                    onBlur={verifyCurrentPassword}
+                    placeholder="Enter current password"
+                  />
+                  <button className="pf-eye-btn" onClick={() => setShowCurrent(v => !v)}>
+                    {showCurrent ? <FaEye /> : <FaEyeSlash />}
+                  </button>
+                </div>
+                {passwordErrors.currentPassword && (
+                  <p className="pf-field-error">{passwordErrors.currentPassword}</p>
+                )}
+                {isCurrentValid && (
+                  <p className="pf-field-ok">✓ Password verified</p>
+                )}
+              </div>
+
+              <div className="pf-field">
+                <label className="pf-label">New Password</label>
+                <div className="pf-pw-row">
+                  <input
+                    className="pf-input"
+                    type={showNew ? "text" : "password"}
+                    name="newPassword"
+                    value={passwordForm.newPassword}
+                    onChange={handlePasswordChange}
+                    disabled={!isCurrentValid}
+                    placeholder="Enter new password"
+                  />
+                  <button className="pf-eye-btn" onClick={() => setShowNew(v => !v)}>
+                    {showNew ? <FaEye /> : <FaEyeSlash />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="pf-field">
+                <label className="pf-label">Confirm New Password</label>
+                <div className="pf-pw-row">
+                  <input
+                    className="pf-input"
+                    type={showConfirm ? "text" : "password"}
+                    name="confirmPassword"
+                    value={passwordForm.confirmPassword}
+                    onChange={handlePasswordChange}
+                    disabled={!isCurrentValid}
+                    placeholder="Repeat new password"
+                  />
+                  <button className="pf-eye-btn" onClick={() => setShowConfirm(v => !v)}>
+                    {showConfirm ? <FaEye /> : <FaEyeSlash />}
+                  </button>
+                </div>
+                {passwordErrors.confirmPassword && (
+                  <p className="pf-field-error">{passwordErrors.confirmPassword}</p>
+                )}
+              </div>
+
+              <div className="pf-pw-action">
+                <button
+                  className="pf-save-btn"
+                  onClick={changePassword}
+                  disabled={!isCurrentValid || !!passwordErrors.confirmPassword}
+                >
+                  Change Password
+                </button>
+              </div>
+
+            </div>
           </div>
         )}
 
-        {/* ================= PASSWORD TAB ================= */}
-        {activeTab === "password" && (
-          <div className="profile-box">
-            <h3>Change Password</h3>
-
-            {error && <p className="error-msg">{error}</p>}
-            {success && <p className="success-msg">{success}</p>}
-
-            <label>Current Password</label>
-            <div className="password-field">
-              <input
-                type={showCurrent ? "text" : "password"}
-                name="currentPassword"
-                value={passwordForm.currentPassword}
-                onChange={handlePasswordChange}
-                onBlur={verifyCurrentPassword}
-              />
-              <span onClick={() => setShowCurrent(!showCurrent)}>
-                {showCurrent ? <FaEye /> : <FaEyeSlash />}
-              </span>
-            </div>
-            {passwordErrors.currentPassword && (
-              <p className="field-error">
-                {passwordErrors.currentPassword}
-              </p>
-            )}
-
-            <label>New Password</label>
-            <div className="password-field">
-              <input
-                type={showNew ? "text" : "password"}
-                name="newPassword"
-                value={passwordForm.newPassword}
-                onChange={handlePasswordChange}
-                disabled={!isCurrentValid}
-              />
-              <span onClick={() => setShowNew(!showNew)}>
-                {showNew ? <FaEye /> : <FaEyeSlash />}
-              </span>
-            </div>
-
-            <label>Confirm New Password</label>
-            <div className="password-field">
-              <input
-                type={showConfirm ? "text" : "password"}
-                name="confirmPassword"
-                value={passwordForm.confirmPassword}
-                onChange={handlePasswordChange}
-                disabled={!isCurrentValid}
-              />
-              <span onClick={() => setShowConfirm(!showConfirm)}>
-                {showConfirm ? <FaEye /> : <FaEyeSlash />}
-              </span>
-            </div>
-            {passwordErrors.confirmPassword && (
-              <p className="field-error">
-                {passwordErrors.confirmPassword}
-              </p>
-            )}
-
-            <button
-              className="primary-btn"
-              onClick={changePassword}
-              disabled={!isCurrentValid || passwordErrors.confirmPassword}
-            >
-              Change Password
-            </button>
-          </div>
-        )}
       </div>
     </Layout>
   );

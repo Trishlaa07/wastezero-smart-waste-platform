@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
 import axios from "axios";
-import { Calendar, MapPin, Clock, Eye, Search, SlidersHorizontal, X, ChevronDown } from "lucide-react";
+import { Calendar, MapPin, Clock, Eye, Search, SlidersHorizontal, X, ChevronDown, Plus } from "lucide-react";
 import { useSocket } from "../context/SocketContext";
 import "../styles/Opportunities.css";
 
@@ -17,6 +17,7 @@ function Opportunities() {
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState("");
   const [showFilters, setShowFilters]     = useState(false);
+  const [autoMatch, setAutoMatch]         = useState(true); // loaded from backend
 
   const token = localStorage.getItem("token");
 
@@ -27,7 +28,6 @@ function Opportunities() {
 
   const isVolunteer = user?.role === "volunteer";
 
-  /* ── Filter state ── */
   const [search,       setSearch]       = useState(() => {
     const params = new URLSearchParams(location.search);
     return params.get("search") || "";
@@ -37,20 +37,31 @@ function Opportunities() {
   const [sortBy,       setSortBy]       = useState(isVolunteer ? "match" : "date");
   const [distFilter,   setDistFilter]   = useState(isVolunteer ? "50" : "all");
 
-  // ✅ "Any distance" moved to last, no default tag
   const DISTANCE_OPTIONS = [
-    { v: "50",  label: "Within 50 km" },
+    { v: "50",  label: "Within 50 km"  },
     { v: "100", label: "Within 100 km" },
     { v: "150", label: "Within 150 km" },
     { v: "200", label: "Within 200 km" },
-    { v: "all", label: "Any distance" },
+    { v: "all", label: "Any distance"  },
   ];
 
-  /* ── Time ago ── */
+  // ── Load autoMatch preference from backend ──
+  useEffect(() => {
+    if (!token || !isVolunteer) return;
+    axios.get(`${API}/api/settings/preferences`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then(res => {
+      const am = res.data.data?.autoMatch;
+      if (am !== undefined) setAutoMatch(am);
+    })
+    .catch(() => {}); // silently fall back to true
+  }, [token, isVolunteer]);
+
   const timeAgo = (date) => {
     if (!date) return "";
-    const diff = Date.now() - new Date(date);
-    const mins = Math.floor(diff / 60000);
+    const diff  = Date.now() - new Date(date);
+    const mins  = Math.floor(diff / 60000);
     if (mins < 1)  return "Just now";
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
@@ -58,7 +69,6 @@ function Opportunities() {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
-  /* ── Fetch — endpoint depends on distFilter ── */
   const fetchOpportunities = useCallback(async () => {
     try {
       setLoading(true);
@@ -69,17 +79,22 @@ function Opportunities() {
       if (user?.role === "ngo") {
         url = `${API}/api/opportunities/my`;
       } else if (user?.role === "volunteer") {
-        url = distFilter === "all"
-          ? `${API}/api/opportunities`
-          : `${API}/api/opportunities/matched`;
+        if (!autoMatch) {
+          // Auto-match OFF → show all opportunities, no skill filtering
+          url = `${API}/api/opportunities`;
+        } else {
+          // Auto-match ON → use matched endpoint (respects distance)
+          url = distFilter === "all"
+            ? `${API}/api/opportunities`
+            : `${API}/api/opportunities/matched`;
+        }
       } else {
         url = `${API}/api/opportunities`;
       }
 
       const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       setOpportunities(res.data);
     } catch (err) {
       console.log("Fetch Error:", err);
@@ -87,13 +102,12 @@ function Opportunities() {
     } finally {
       setLoading(false);
     }
-  }, [token, user?.role, distFilter]);
+  }, [token, user?.role, distFilter, autoMatch]);
 
   useEffect(() => {
     if (token) fetchOpportunities();
   }, [fetchOpportunities]);
 
-  /* ── Real-time: new opportunity ── */
   useEffect(() => {
     if (!socket) return;
     const handleNew = (newOpp) => {
@@ -107,7 +121,6 @@ function Opportunities() {
     return () => socket.off("newOpportunity", handleNew);
   }, [socket, user?.role]);
 
-  /* ── Real-time: opportunity updated ── */
   useEffect(() => {
     if (!socket) return;
     const handleUpdated = (updated) => {
@@ -119,11 +132,9 @@ function Opportunities() {
     return () => socket.off("opportunityUpdated", handleUpdated);
   }, [socket]);
 
-  /* ── Filtered + sorted list ── */
   const filtered = useMemo(() => {
     let list = [...opportunities];
 
-    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(o =>
@@ -134,13 +145,11 @@ function Opportunities() {
       );
     }
 
-    // Status
-    if (statusFilter !== "all") {
+    if (statusFilter !== "all")
       list = list.filter(o => o.status === statusFilter);
-    }
 
-    // Skill match — volunteer only
-    if (isVolunteer && matchFilter !== "all") {
+    // Only apply skill match filter when autoMatch is ON
+    if (isVolunteer && autoMatch && matchFilter !== "all") {
       list = list.filter(o => {
         const m = o.skillMatch || 0;
         if (matchFilter === "high")   return m >= 70;
@@ -150,34 +159,31 @@ function Opportunities() {
       });
     }
 
-    // Distance frontend filter
     if (isVolunteer && distFilter !== "all") {
       const km = parseInt(distFilter);
-      list = list.filter(o =>
-        o.distance === undefined || o.distance <= km
-      );
+      list = list.filter(o => o.distance === undefined || o.distance <= km);
     }
 
-    // Sort
     list.sort((a, b) => {
-      if (sortBy === "match")    return (b.skillMatch || 0) - (a.skillMatch || 0);
-      if (sortBy === "date")     return new Date(b.createdAt) - new Date(a.createdAt);
-      if (sortBy === "date_asc") return new Date(a.createdAt) - new Date(b.createdAt);
-      if (sortBy === "distance") return (a.distance ?? 9999) - (b.distance ?? 9999);
+      // When autoMatch is OFF, default sort is date not match score
+      if (sortBy === "match" && autoMatch) return (b.skillMatch || 0) - (a.skillMatch || 0);
+      if (sortBy === "match" && !autoMatch) return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sortBy === "date")               return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sortBy === "date_asc")           return new Date(a.createdAt) - new Date(b.createdAt);
+      if (sortBy === "distance")           return (a.distance ?? 9999) - (b.distance ?? 9999);
       return 0;
     });
 
     return list;
-  }, [opportunities, search, statusFilter, matchFilter, distFilter, sortBy, isVolunteer]);
+  }, [opportunities, search, statusFilter, matchFilter, distFilter, sortBy, isVolunteer, autoMatch]);
 
-  /* ── Active filter count ── */
   const activeFilterCount = [
-    search.trim()                        ? 1 : 0,
-    matchFilter  !== "all"               ? 1 : 0,
-    isVolunteer  && distFilter !== "50"  ? 1 : 0,
-    statusFilter !== "all"               ? 1 : 0,
-    isVolunteer  && sortBy !== "match"   ? 1 : 0,
-    !isVolunteer && sortBy !== "date"    ? 1 : 0,
+    search.trim()                       ? 1 : 0,
+    matchFilter  !== "all"              ? 1 : 0,
+    isVolunteer && distFilter !== "50"  ? 1 : 0,
+    statusFilter !== "all"              ? 1 : 0,
+    isVolunteer && sortBy !== "match"   ? 1 : 0,
+    !isVolunteer && sortBy !== "date"   ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
@@ -196,21 +202,37 @@ function Opportunities() {
         <div className="opportunity-header">
           <div>
             <h2>
-              {user?.role === "ngo"
-                ? "Manage My Opportunities"
-                : "Volunteer Opportunities"}
+              {user?.role === "ngo" ? "Manage My Opportunities" : "Volunteer Opportunities"}
             </h2>
             <p className="sub-text">
               {user?.role === "ngo"
                 ? "Manage and monitor your NGO activities"
-                : "Browse and join recycling initiatives"}
+                : autoMatch
+                  ? "Showing opportunities matched to your skills"
+                  : "Showing all opportunities"}
             </p>
           </div>
+
+          {/* Auto-match badge for volunteers */}
+          {isVolunteer && (
+            <div className={`automatch-badge ${autoMatch ? "on" : "off"}`}>
+              {autoMatch ? "🔥 Auto-match ON" : "All opportunities"}
+            </div>
+          )}
+
+          {user?.role === "ngo" && (
+            <button
+              className="create-opp-btn"
+              onClick={() => navigate("/create-opportunity")}
+            >
+              <Plus size={16} />
+              Create Opportunity
+            </button>
+          )}
         </div>
 
-        {/* ── SEARCH + FILTER BAR ── */}
+        {/* SEARCH + FILTER BAR */}
         <div className="filter-bar">
-
           <div className="search-box">
             <Search size={15} className="search-icon" />
             <input
@@ -240,20 +262,17 @@ function Opportunities() {
 
           <div className="select-wrap">
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              {isVolunteer && <option value="match">Sort: Best Match</option>}
+              {isVolunteer && autoMatch && <option value="match">Sort: Best Match</option>}
               <option value="date">Sort: Newest</option>
               <option value="date_asc">Sort: Oldest</option>
               {isVolunteer && <option value="distance">Sort: Nearest</option>}
             </select>
           </div>
-
         </div>
 
-        {/* ── EXPANDED FILTER PANEL ── */}
+        {/* FILTER PANEL */}
         {showFilters && (
           <div className="filter-panel">
-
-            {/* Status */}
             <div className="filter-group">
               <p className="filter-label">Status</p>
               <div className="filter-pills">
@@ -269,16 +288,16 @@ function Opportunities() {
               </div>
             </div>
 
-            {/* Skill match — volunteer only */}
-            {isVolunteer && (
+            {/* Skill match filter only shown when autoMatch is ON */}
+            {isVolunteer && autoMatch && (
               <div className="filter-group">
                 <p className="filter-label">Skill Match</p>
                 <div className="filter-pills">
                   {[
-                    { v: "all",    label: "All" },
-                    { v: "high",   label: "High (70%+)" },
+                    { v: "all",    label: "All"             },
+                    { v: "high",   label: "High (70%+)"     },
                     { v: "medium", label: "Medium (40–69%)" },
-                    { v: "low",    label: "Low (<40%)" },
+                    { v: "low",    label: "Low (<40%)"      },
                   ].map(({ v, label }) => (
                     <button
                       key={v}
@@ -292,7 +311,6 @@ function Opportunities() {
               </div>
             )}
 
-            {/* Distance — volunteer only */}
             {isVolunteer && (
               <div className="filter-group">
                 <p className="filter-label">Distance</p>
@@ -315,7 +333,6 @@ function Opportunities() {
                 <X size={13} /> Clear all filters
               </button>
             )}
-
           </div>
         )}
 
@@ -331,12 +348,8 @@ function Opportunities() {
           </p>
         )}
 
-        {/* LOADING */}
-        {loading && (
-          <div className="loading-state">Loading opportunities...</div>
-        )}
+        {loading && <div className="loading-state">Loading opportunities...</div>}
 
-        {/* ERROR */}
         {error && (
           <div className="error-banner">
             {error}
@@ -351,34 +364,26 @@ function Opportunities() {
               <div className="no-results">
                 <p>No opportunities match your filters.</p>
                 {activeFilterCount > 0 && (
-                  <button className="clear-all-btn" onClick={clearFilters}>
-                    Clear filters
-                  </button>
+                  <button className="clear-all-btn" onClick={clearFilters}>Clear filters</button>
                 )}
               </div>
             ) : (
               filtered.map((opp) => (
                 <div key={opp._id} className="opportunity-card">
-
                   <img
                     src={opp.image ? `${API}/uploads/${opp.image}` : "/no-image.png"}
                     alt="opportunity"
                     className="opportunity-image"
                   />
 
-                  <span className={`status-badge ${opp.status}`}>
-                    {opp.status}
-                  </span>
+                  <span className={`status-badge ${opp.status}`}>{opp.status}</span>
 
                   <div className="card-content">
                     <h3>{opp.title}</h3>
                     <p className="description">{opp.description}</p>
 
                     <div className="card-meta">
-                      <p>
-                        <Calendar size={16} />
-                        {opp.date ? opp.date.slice(0, 10) : "Date not specified"}
-                      </p>
+                      <p><Calendar size={16} />{opp.date ? opp.date.slice(0, 10) : "Date not specified"}</p>
                       <p>
                         <MapPin size={16} />
                         {opp.location || "Location not specified"}
@@ -386,14 +391,12 @@ function Opportunities() {
                           <> • {opp.distance === 0 ? "Near you" : `${opp.distance} km away`}</>
                         )}
                       </p>
-                      <p>
-                        <Clock size={16} />
-                        {opp.duration || "Flexible"}
-                      </p>
+                      <p><Clock size={16} />{opp.duration || "Flexible"}</p>
                       <p className="posted-date">Posted {timeAgo(opp.createdAt)}</p>
                     </div>
 
-                    {isVolunteer && (
+                    {/* Only show skill match bar when autoMatch is ON */}
+                    {isVolunteer && autoMatch && (
                       <>
                         <p className={`match-score ${opp.skillMatch === 0 ? "suggested" : ""}`}>
                           {opp.skillMatch === 0
@@ -417,14 +420,12 @@ function Opportunities() {
                       <Eye size={16} />
                       View Details
                     </button>
-
                   </div>
                 </div>
               ))
             )}
           </div>
         )}
-
       </div>
     </Layout>
   );

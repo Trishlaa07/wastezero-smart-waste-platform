@@ -2,6 +2,7 @@ import { useState } from "react";
 import Layout from "../components/Layout";
 import { Search, Mail, Phone, Book, ChevronDown, ChevronUp, MessageCircle, Send, CheckCircle } from "lucide-react";
 import "../styles/settingsSupport.css";
+import axios from "axios";
 
 const Support = () => {
   const user = JSON.parse(localStorage.getItem("user")) || { name: "User", role: "volunteer" };
@@ -50,18 +51,36 @@ const Support = () => {
     f.a.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleContactSubmit = (e) => {
+  const handleContactSubmit = async (e) => {
     e.preventDefault();
+
     if (!contactForm.subject || !contactForm.message) return;
-    
+
     setIsSubmitting(true);
-    // Mock API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+
+    try {
+      const res = await axios.post(
+        "http://localhost:5001/api/support/message",
+        {
+          subject: contactForm.subject,
+          message: contactForm.message,
+          user: user
+        }
+      );
+
+      console.log("Response:", res.data);
+
       setSubmitted(true);
       setContactForm({ subject: "", message: "" });
+
       setTimeout(() => setSubmitted(false), 5000);
-    }, 1500);
+
+    } catch (err) {
+      console.error("Error:", err);
+      alert("Failed to send message");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -133,7 +152,7 @@ const Support = () => {
           <div className="contact-card">
             <div className="contact-icon"><Phone size={24} /></div>
             <span className="setting-title">Phone Support</span>
-            <span className="setting-desc">+1 (555) 123-4567</span>
+            <span className="setting-desc">+91 9876543210</span>
             <a 
               href="tel:+15551234567" 
               className="vol-browse-btn" 

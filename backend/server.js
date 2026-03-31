@@ -15,6 +15,9 @@ const adminRoutes        = require("./routes/adminRoutes");
 const applicationRoutes  = require("./routes/applicationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes       = require("./routes/reportRoutes");
+const pickupRoutes       = require("./routes/pickupRoutes"); // ← only once
+const supportRoutes = require("./routes/supportRoutes");
+
 
 const { markMessagesReadSocket } = require("./controllers/messageController");
 
@@ -25,7 +28,7 @@ const server = http.createServer(app);
 app.use(cors({
   origin:      "http://localhost:5173",
   methods:     ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true
+  credentials: true,
 }));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
@@ -36,76 +39,54 @@ const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: {
     origin:  "http://localhost:5173",
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
 });
 
 global.io = io;
 
-/* Track online users: Map<userId, socketId> */
 const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
   console.log("🔌 Socket connected:", socket.id);
 
-  /* ── USER JOINS THEIR ROOM ── */
   socket.on("join", (userId) => {
-    if (!userId) {
-      console.log("⚠️  join called without userId");
-      return;
-    }
-
+    if (!userId) return;
     const roomId = userId.toString();
 
-    /* Leave any previous room this socket was in */
     socket.rooms.forEach(room => {
       if (room !== socket.id) socket.leave(room);
     });
 
     socket.join(roomId);
     socket.userId = roomId;
-
     onlineUsers.set(roomId, socket.id);
 
-    /* Broadcast updated online list to everyone */
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
-
-    /* Also send the current list directly to this socket right away —
-       so the Messages page gets accurate status without waiting for
-       someone else to connect/disconnect */
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
-
-    console.log(`✅ User ${roomId} joined room. Online: ${onlineUsers.size}`);
+    console.log(`✅ User ${roomId} joined. Online: ${onlineUsers.size}`);
   });
 
-  /* ── GET ONLINE USERS (called on Messages page mount) ── */
   socket.on("getOnlineUsers", () => {
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
   });
 
-  /* ── MARK READ (receiver has chat open, new message arrived) ──
-     Updates DB and fires messagesRead back to sender so ticks turn blue
-     without the sender needing to re-open the chat.                    */
   socket.on("markRead", async ({ senderId, receiverId }) => {
     if (!senderId || !receiverId) return;
     await markMessagesReadSocket(senderId, receiverId);
   });
 
-  /* ── TYPING ── */
   socket.on("typing", ({ sender, receiver }) => {
-    if (receiver) {
-      io.to(receiver.toString()).emit("typing", { sender });
-    }
+    if (receiver) io.to(receiver.toString()).emit("typing", { sender });
   });
 
-  /* ── DISCONNECT ── */
   socket.on("disconnect", () => {
     if (socket.userId) {
       onlineUsers.delete(socket.userId);
       io.emit("onlineUsers", Array.from(onlineUsers.keys()));
-      console.log(`❌ User ${socket.userId} disconnected. Online: ${onlineUsers.size}`);
+      console.log(`❌ User ${socket.userId} disconnected`);
     } else {
-      console.log("❌ Socket disconnected (no userId):", socket.id);
+      console.log("❌ Socket disconnected:", socket.id);
     }
   });
 });
@@ -120,6 +101,8 @@ app.use("/api/applications",  applicationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages",      messageRoutes);
 app.use("/api/reports",       reportRoutes);
+app.use("/api/pickups",       pickupRoutes(io)); // ← only once, io passed correctly
+app.use("/api/support", supportRoutes);
 
 app.get("/", (req, res) => res.send("API Running..."));
 
