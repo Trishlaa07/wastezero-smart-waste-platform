@@ -17,31 +17,36 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes       = require("./routes/reportRoutes");
 const pickupRoutes       = require("./routes/pickupRoutes");
 const supportRoutes      = require("./routes/supportRoutes");
+const settingsRoutes     = require("./routes/settingsRoutes"); // ✅ NEW
 
 const { markMessagesReadSocket } = require("./controllers/messageController");
 
 const app    = express();
 const server = http.createServer(app);
 
-/* ── ✅ CORS (FINAL WORKING) ── */
+/* ── CORS ── */
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
+  "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com",
 ];
 
-app.use(cors({
-  origin: function(origin, callback) {
-    // allow requests with no origin (like Postman)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log("❌ Blocked by CORS:", origin);
-      callback(null, false);
-    }
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (Postman, Render health checks)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.log("❌ Blocked by CORS:", origin);
+    return callback(new Error("Not allowed by CORS"));
   },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true
-}));
+  methods:        ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials:    true,
+};
+
+app.use(cors(corsOptions));
+
+// ✅ Explicitly handle OPTIONS preflight for every route
+app.options("*", cors(corsOptions));
 
 /* ── MIDDLEWARE ── */
 app.use(express.json());
@@ -52,8 +57,8 @@ const { Server } = require("socket.io");
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
+    origin:      allowedOrigins,
+    methods:     ["GET", "POST"],
     credentials: true,
   },
 });
@@ -78,7 +83,7 @@ io.on("connection", (socket) => {
     socket.userId = roomId;
     onlineUsers.set(roomId, socket.id);
 
-    io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+    io.emit("onlineUsers",  Array.from(onlineUsers.keys()));
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
   });
 
@@ -118,24 +123,22 @@ app.use("/api/messages",      messageRoutes);
 app.use("/api/reports",       reportRoutes);
 app.use("/api/pickups",       pickupRoutes(io));
 app.use("/api/support",       supportRoutes);
+app.use("/api/settings",      settingsRoutes); // ✅ NEW
 
 /* ── TEST ROUTE ── */
-app.get("/", (req, res) => {
-  res.send("✅ API Running...");
+app.get("/", (req, res) => res.send("✅ API Running..."));
+
+/* ── DATABASE ── */
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser:    true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ MongoDB Connected"))
+.catch((err) => {
+  console.error("❌ MongoDB Error:", err.message);
+  process.exit(1);
 });
 
-/* ── DATABASE CONNECTION ── */
-/* ── DATABASE CONNECTION ── */
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => {
-    console.error("❌ MongoDB Error:", err.message);
-    process.exit(1);
-  });
-
-/* ── START SERVER ── */
+/* ── START ── */
 const PORT = process.env.PORT || 5001;
-
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
