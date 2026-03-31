@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import axios from "axios";
-import "../styles/CreateOpportunity.css";
+import "../styles/createOpportunity.css";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
 
