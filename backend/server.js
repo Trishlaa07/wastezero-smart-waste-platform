@@ -23,18 +23,22 @@ const { markMessagesReadSocket } = require("./controllers/messageController");
 const app    = express();
 const server = http.createServer(app);
 
-/* ── ✅ FIXED CORS (NO BLOCKING) ── */
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true,
-}));
+/* ── ✅ CORS (FIXED) ── */
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
+];
 
-/* OPTIONAL: handle preflight requests */
-app.options("*", cors());
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("❌ CORS Not Allowed"));
+    }
+  },
+  credentials: true
+}));
 
 /* ── MIDDLEWARE ── */
 app.use(express.json());
@@ -45,10 +49,7 @@ const { Server } = require("socket.io");
 
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -77,7 +78,7 @@ io.on("connection", (socket) => {
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
 
-    console.log(`✅ User ${roomId} joined. Online: ${onlineUsers.size}`);
+    console.log(`✅ User ${roomId} joined`);
   });
 
   socket.on("getOnlineUsers", () => {
@@ -100,8 +101,6 @@ io.on("connection", (socket) => {
       onlineUsers.delete(socket.userId);
       io.emit("onlineUsers", Array.from(onlineUsers.keys()));
       console.log(`❌ User ${socket.userId} disconnected`);
-    } else {
-      console.log("❌ Socket disconnected:", socket.id);
     }
   });
 });
@@ -124,10 +123,16 @@ app.get("/", (req, res) => {
   res.send("✅ API Running...");
 });
 
-/* ── DATABASE ── */
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error("❌ MongoDB Error:", err));
+/* ── DATABASE (IMPROVED) ── */
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ MongoDB Connected"))
+.catch(err => {
+  console.error("❌ MongoDB Error:", err.message);
+  process.exit(1); // stop app if DB fails
+});
 
 /* ── START SERVER ── */
 const PORT = process.env.PORT || 5001;
