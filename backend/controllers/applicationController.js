@@ -26,7 +26,6 @@ exports.applyToOpportunity = async (req, res) => {
       });
     }
 
-    /* Check if spots are still available */
     if (
       opportunity.volunteersNeeded > 0 &&
       opportunity.applicantCount >= opportunity.volunteersNeeded
@@ -41,12 +40,10 @@ exports.applyToOpportunity = async (req, res) => {
       opportunity: opportunityId,
     });
 
-    /* Increment applicant count */
     await Opportunity.findByIdAndUpdate(opportunityId, {
-      $inc: { applicantCount: 1 }
+      $inc: { applicantCount: 1 },
     });
 
-    /* Notify NGO */
     await createNotification(
       opportunity.ngo,
       `A volunteer applied to your opportunity: "${opportunity.title}"`,
@@ -55,7 +52,6 @@ exports.applyToOpportunity = async (req, res) => {
       "Opportunity"
     );
 
-    /* Real-time: tell NGO with full skills + requiredSkills */
     if (global.io) {
       const populated = await Application.findById(application._id)
         .populate("volunteer",   "name email skills")
@@ -81,6 +77,8 @@ exports.applyToOpportunity = async (req, res) => {
 
 /* =====================================
    NGO VIEW APPLICATIONS
+   — respects volunteer's profileVisibility:
+     if false, skills and bio are hidden
 ===================================== */
 exports.getNGOApplications = async (req, res) => {
   try {
@@ -92,11 +90,29 @@ exports.getNGOApplications = async (req, res) => {
     const applications = await Application.find({
       opportunity: { $in: opportunityIds },
     })
-      .populate("volunteer",   "name email skills")
+      // Fetch profileVisibility alongside the volunteer fields
+      .populate("volunteer",   "name email skills bio profileVisibility")
       .populate("opportunity", "title date location status requiredSkills volunteersNeeded")
       .sort({ createdAt: -1 });
 
-    res.status(200).json(applications);
+    /* Strip skills & bio when volunteer has hidden their profile */
+    const sanitized = applications.map((app) => {
+      const appObj   = app.toObject();
+      const vol      = appObj.volunteer;
+
+      if (vol && vol.profileVisibility === false) {
+        vol.skills = [];
+        vol.bio    = "";
+        // Keep name & email so NGO knows who applied
+      }
+
+      // Don't leak the flag itself to the client
+      if (vol) delete vol.profileVisibility;
+
+      return appObj;
+    });
+
+    res.status(200).json(sanitized);
 
   } catch (error) {
     console.log("GET NGO APPLICATION ERROR:", error);
@@ -128,10 +144,9 @@ exports.updateApplicationStatus = async (req, res) => {
     application.status = status;
     await application.save();
 
-    /* If rejected, free up a spot */
     if (status === "rejected") {
       await Opportunity.findByIdAndUpdate(application.opportunity._id, {
-        $inc: { applicantCount: -1 }
+        $inc: { applicantCount: -1 },
       });
 
       if (global.io) {
@@ -143,7 +158,6 @@ exports.updateApplicationStatus = async (req, res) => {
       }
     }
 
-    /* Notify volunteer */
     await createNotification(
       application.volunteer,
       `Your application for "${application.opportunity.title}" was ${status}`,
@@ -152,7 +166,6 @@ exports.updateApplicationStatus = async (req, res) => {
       "Opportunity"
     );
 
-    /* Real-time: tell volunteer */
     if (global.io) {
       global.io
         .to(application.volunteer.toString())
@@ -205,7 +218,10 @@ exports.getVolunteerApplications = async (req, res) => {
     const volunteerId = req.user.id;
 
     const applications = await Application.find({ volunteer: volunteerId })
-      .populate("opportunity", "title date location status volunteersNeeded applicantCount requiredSkills")
+      .populate(
+        "opportunity",
+        "title date location status volunteersNeeded applicantCount requiredSkills"
+      )
       .sort({ createdAt: -1 });
 
     res.status(200).json(applications);

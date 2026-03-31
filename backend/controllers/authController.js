@@ -175,7 +175,12 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-/* ================= LOGIN ================= */
+/* ================= LOGIN =================
+   Drop this loginUser export into your
+   existing authController.js, replacing
+   the current one.
+================================================ */
+
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -187,16 +192,23 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ message: "Verify OTP first" });
     }
 
+    /* ── Admin-imposed suspension — hard block ── */
     if (user.isSuspended) {
       return res.status(403).json({
         message: "Account suspended",
-        reason: user.suspensionReason,
+        reason:  user.suspensionReason,
       });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    /* ── Self-deactivated: silently reactivate on login ── */
+    if (user.status === "inactive") {
+      user.status = "active";
+      await user.save();
     }
 
     const token = jwt.sign(
@@ -208,10 +220,10 @@ exports.loginUser = async (req, res) => {
     res.json({
       token,
       user: {
-        _id: user._id,
-        name: user.name,
+        _id:   user._id,
+        name:  user.name,
         email: user.email,
-        role: user.role,
+        role:  user.role,
       },
     });
 
@@ -220,7 +232,6 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 /* ================= FORGOT PASSWORD ================= */
 exports.forgotPassword = async (req, res) => {
   try {

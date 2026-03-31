@@ -6,11 +6,7 @@
   padding: 24px 28px 48px;
 }
 
-/* ─── PAGE HEADER ──────────────────────────────────── */
-
-.sp-page-header {
-  margin-bottom: 20px;
-}
+.sp-page-header { margin-bottom: 20px; }
 
 .sp-page-title {
   font-size: 22px;
@@ -41,10 +37,7 @@
   gap: 8px;
 }
 
-.sp-notice::before {
-  content: "✓";
-  flex-shrink: 0;
-}
+.sp-notice::before { content: "✓"; flex-shrink: 0; }
 
 /* ─── TABS ─────────────────────────────────────────── */
 
@@ -73,13 +66,10 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.sp-tab:hover {
-  background: #ffffff;
-  color: #1f2937;
-}
+.sp-tab:hover { background: #fff; color: #1f2937; }
 
 .sp-tab.active {
-  background: #ffffff;
+  background: #fff;
   color: #1f7a6b;
   box-shadow: inset 0 -2px 0 #1f7a6b;
 }
@@ -91,25 +81,20 @@
   font-size: 11px;
   font-weight: 700;
   padding: 1px 8px;
-  line-height: 1.6;
 }
 
 /* ─── CARD ─────────────────────────────────────────── */
 
 .sp-card {
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 22px 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
   margin-bottom: 16px;
 }
 
-/* Form card: constrained width for the volunteer new-pickup form */
-.sp-form-card {
-  max-width: 100%;
-  width: 100%;
-}
+.sp-form-card { width: 100%; }
 
 .sp-card-title {
   font-size: 15px;
@@ -150,15 +135,11 @@
   font-weight: 700;
   background: #e5e7eb;
   color: #9ca3af;
-  flex-shrink: 0;
   transition: background 0.2s, color 0.2s;
 }
 
 .sp-step-dot.active,
-.sp-step-dot.done {
-  background: #1f7a6b;
-  color: #ffffff;
-}
+.sp-step-dot.done { background: #1f7a6b; color: #fff; }
 
 .sp-step-lbl {
   font-size: 11px;
@@ -169,12 +150,8 @@
   white-space: nowrap;
 }
 
-.sp-step-lbl.active {
-  color: #1f7a6b;
-  font-weight: 700;
-}
+.sp-step-lbl.active { color: #1f7a6b; font-weight: 700; }
 
-/* The line between step dots */
 .sp-step-connector {
   flex: 1;
   height: 2px;
@@ -183,15 +160,11 @@
   transition: background 0.2s;
 }
 
-.sp-step-connector.done {
-  background: #1f7a6b;
-}
+.sp-step-connector.done { background: #1f7a6b; }
 
 /* ─── FORM ─────────────────────────────────────────── */
 
-.sp-form-body {
-  padding-top: 4px;
-}
+.sp-form-body { padding-top: 4px; }
 
 .sp-field {
   display: flex;
@@ -206,19 +179,8 @@
   color: #374151;
 }
 
-.sp-help {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: -2px;
-  margin-bottom: 0;
-}
-
-.sp-footnote {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 6px;
-  margin-bottom: 0;
-}
+.sp-help { font-size: 12px; color: #6b7280; margin-top: -2px; }
+.sp-footnote { font-size: 11px; color: #9ca3af; margin-top: 6px; }
 
 .sp-field input,
 .sp-field select,
@@ -244,19 +206,17 @@
 }
 
 .sp-field input::placeholder,
-.sp-field textarea::placeholder {
-  color: #9ca3af;
-}
+.sp-field textarea::placeholder { color: #9ca3af; }
 
 .sp-field input:focus,
 .sp-field select:focus,
 .sp-field textarea:focus {
   border-color: #1f7a6b;
-  box-shadow: 0 0 0 3px rgba(31, 122, 107, 0.12);
+  box-shadow: 0 0 0 3px rgba(31,122,107,0.12);
 }
 
 .sp-field textarea {
-  min-height: 100px;
+  min-height: 90px;
   resize: vertical;
   line-height: 1.6;
 }
@@ -269,46 +229,73 @@
   gap: 14px;
 }
 
-/* ─── CHECKBOX GRID ────────────────────────────────── */
+/* ─── WASTE TYPE CHIPS ─────────────────────────────── */
 
-.sp-check-grid {
+.sp-waste-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   padding-top: 4px;
 }
 
-.sp-check-label {
+.sp-waste-chip {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
   border: 1.5px solid #e5e7eb;
+  background: #fff;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
   color: #374151;
-  transition: border-color 0.2s, background 0.2s, color 0.2s;
-  user-select: none;
+  transition: all 0.15s ease;
+  text-align: left;
+  position: relative;
+  font-family: inherit;
 }
 
-.sp-check-label:hover {
-  border-color: #1f7a6b;
-  background: #f0fdf9;
-}
-
-.sp-check-label.checked {
+.sp-waste-chip:hover {
   border-color: #1f7a6b;
   background: #f0fdf9;
   color: #1f7a6b;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(31,122,107,0.12);
 }
 
-.sp-check-label input[type="checkbox"] {
-  accent-color: #1f7a6b;
-  width: 15px;
-  height: 15px;
+.sp-waste-chip.selected {
+  border-color: #1f7a6b;
+  background: #f0fdf9;
+  color: #1f7a6b;
+  box-shadow: 0 0 0 3px rgba(31,122,107,0.10);
+}
+
+.sp-waste-icon {
+  font-size: 18px;
   flex-shrink: 0;
+  line-height: 1;
+}
+
+.sp-waste-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sp-waste-tick {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1f7a6b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* ─── ACTIONS ──────────────────────────────────────── */
@@ -333,7 +320,7 @@
   border-radius: 10px;
   border: none;
   background: #1f7a6b;
-  color: #ffffff;
+  color: #fff;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
@@ -342,12 +329,13 @@
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+  font-family: inherit;
 }
 
 .sp-primary-btn:hover {
   background: #155c50;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(31, 122, 107, 0.20);
+  box-shadow: 0 6px 20px rgba(31,122,107,0.20);
 }
 
 .sp-primary-btn:disabled {
@@ -361,23 +349,45 @@
   padding: 10px 20px;
   border-radius: 10px;
   border: 1.5px solid #e5e7eb;
-  background: #ffffff;
+  background: #fff;
   color: #4b5563;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
+  font-family: inherit;
   transition: background 0.15s, border-color 0.15s;
 }
 
-.sp-secondary-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+.sp-secondary-btn:hover { background: #f9fafb; border-color: #d1d5db; }
+.sp-secondary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── ACTION ICON BUTTONS ──────────────────────────── */
+
+.sp-action-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
 }
 
-.sp-secondary-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.sp-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
 }
+
+.sp-icon-btn--edit { color: #1f7a6b; }
+.sp-icon-btn--edit:hover { background: #f0fdf9; border-color: #1f7a6b; }
+
+.sp-icon-btn--cancel { color: #dc2626; }
+.sp-icon-btn--cancel:hover { background: #fef2f2; border-color: #fca5a5; }
 
 /* ─── ERROR ────────────────────────────────────────── */
 
@@ -395,17 +405,11 @@
   gap: 8px;
 }
 
-.sp-error::before {
-  content: "⚠";
-  flex-shrink: 0;
-}
+.sp-error::before { content: "⚠"; flex-shrink: 0; }
 
-/* ─── HISTORY LIST ─────────────────────────────────── */
+/* ─── HISTORY ──────────────────────────────────────── */
 
-.sp-history-empty {
-  text-align: center;
-  padding: 36px 12px;
-}
+.sp-history-empty { text-align: center; padding: 36px 12px; }
 
 .sp-history-empty-text {
   font-size: 13px;
@@ -417,7 +421,7 @@
   padding: 10px 18px;
   border-radius: 10px;
   border: 1.5px solid #e5e7eb;
-  background: #ffffff;
+  background: #fff;
   color: #1f2937;
   font-weight: 700;
   font-size: 13px;
@@ -451,7 +455,7 @@
 
 .sp-history-item:hover {
   border-color: #d1fae5;
-  box-shadow: 0 2px 8px rgba(31, 122, 107, 0.07);
+  box-shadow: 0 2px 8px rgba(31,122,107,0.07);
 }
 
 .sp-history-left {
@@ -462,17 +466,8 @@
   gap: 3px;
 }
 
-.sp-history-date {
-  font-size: 12px;
-  font-weight: 700;
-  color: #374151;
-}
-
-.sp-history-meta {
-  font-size: 12px;
-  color: #6b7280;
-}
-
+.sp-history-date  { font-size: 12px; font-weight: 700; color: #374151; }
+.sp-history-meta  { font-size: 12px; color: #6b7280; }
 .sp-history-address {
   font-size: 12px;
   color: #9ca3af;
@@ -480,17 +475,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.sp-history-agent {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1f7a6b;
-  margin-top: 2px;
-}
+.sp-history-notes { font-size: 11px; color: #9ca3af; font-style: italic; }
+.sp-history-agent { font-size: 12px; font-weight: 600; color: #1f7a6b; margin-top: 2px; }
 
 .sp-history-actions {
   flex-shrink: 0;
   padding-top: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 /* ─── STATS ROW ────────────────────────────────────── */
@@ -504,25 +498,15 @@
 
 .sp-stat-card {
   flex: 1 1 140px;
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 16px 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
-.sp-stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.sp-stat-label {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 500;
-}
+.sp-stat-value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.sp-stat-label { font-size: 12px; color: #6b7280; font-weight: 500; }
 
 /* ─── SECTION LABEL ────────────────────────────────── */
 
@@ -537,19 +521,9 @@
 
 /* ─── MANAGE CARD ──────────────────────────────────── */
 
-.sp-manage-card {
-  margin-bottom: 14px;
-  transition: box-shadow 0.15s, border-color 0.15s;
-}
-
-.sp-manage-card:hover {
-  box-shadow: 0 4px 16px rgba(31, 122, 107, 0.10);
-  border-color: #a7f3d0;
-}
-
-.sp-manage-card--assigned {
-  opacity: 0.82;
-}
+.sp-manage-card { margin-bottom: 14px; transition: box-shadow 0.15s, border-color 0.15s; }
+.sp-manage-card:hover { box-shadow: 0 4px 16px rgba(31,122,107,0.10); border-color: #a7f3d0; }
+.sp-manage-card--assigned { opacity: 0.82; }
 
 .sp-manage-card-top {
   display: flex;
@@ -560,46 +534,15 @@
   margin-bottom: 14px;
 }
 
-.sp-manage-card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-}
-
-.sp-manage-volunteer {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.sp-manage-detail {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.sp-manage-notes {
-  font-size: 12px;
-  color: #9ca3af;
-  font-style: italic;
-  margin-top: 2px;
-}
-
-.sp-assigned-agent {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1f7a6b;
-  margin-top: 2px;
-}
+.sp-manage-card-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.sp-manage-volunteer { font-size: 15px; font-weight: 700; color: #1f2937; }
+.sp-manage-detail    { font-size: 13px; color: #6b7280; }
+.sp-manage-notes     { font-size: 12px; color: #9ca3af; font-style: italic; margin-top: 2px; }
+.sp-assigned-agent   { font-size: 13px; font-weight: 600; color: #1f7a6b; margin-top: 2px; }
 
 /* ─── ASSIGN ROW ───────────────────────────────────── */
 
-.sp-assign-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
+.sp-assign-row { display: flex; gap: 10px; align-items: center; }
 
 .sp-assign-select {
   flex: 1;
@@ -616,73 +559,103 @@
   appearance: none;
 }
 
-.sp-assign-select:focus {
-  border-color: #1f7a6b;
-  box-shadow: 0 0 0 3px rgba(31, 122, 107, 0.12);
-}
+.sp-assign-select:focus { border-color: #1f7a6b; box-shadow: 0 0 0 3px rgba(31,122,107,0.12); }
 
 /* ─── EMPTY BOX ────────────────────────────────────── */
 
-.sp-empty-box {
-  text-align: center;
-  padding: 32px 16px;
+.sp-empty-box { text-align: center; padding: 32px 16px; }
+
+/* ─── MODAL ────────────────────────────────────────── */
+
+.sp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
+
+.sp-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 520px;
+  max-width: 94%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+}
+
+.sp-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
+.sp-modal-header h3 { font-size: 16px; font-weight: 700; color: #1f2937; margin: 0; }
+
+.sp-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sp-modal-close:hover { background: #f3f4f6; color: #374151; }
+
+.sp-modal-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sp-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid #f3f4f6;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+}
+
+/* ─── LOADING ──────────────────────────────────────── */
+
+.sp-loading { font-size: 13px; color: #9ca3af; text-align: center; padding: 32px 0; }
 
 /* ─── RESPONSIVE ───────────────────────────────────── */
 
 @media (max-width: 900px) {
-  .sp-page {
-    padding: 16px 16px 32px;
-  }
-
-  .sp-form-card {
-    max-width: 100%;
-  }
-
-  .sp-row-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .sp-check-grid {
-    grid-template-columns: 1fr 1fr;
-  }
+  .sp-page { padding: 16px 16px 32px; }
+  .sp-row-2 { grid-template-columns: 1fr; }
+  .sp-waste-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {
-  .sp-check-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sp-stats-row {
-    gap: 10px;
-  }
-
-  .sp-stat-card {
-    padding: 12px 14px;
-  }
-
-  .sp-stat-value {
-    font-size: 22px;
-  }
+  .sp-waste-grid { grid-template-columns: repeat(2, 1fr); }
+  .sp-stats-row { gap: 10px; }
+  .sp-stat-card { padding: 12px 14px; }
+  .sp-stat-value { font-size: 22px; }
 }
 
 @media (max-width: 480px) {
-  .sp-tabs {
-    flex-direction: column;
-    border-radius: 10px;
-  }
-
-  .sp-tab {
-    border-bottom: none;
-    border-left: 3px solid transparent;
-  }
-
-  .sp-tab.active {
-    box-shadow: none;
-    border-left-color: #1f7a6b;
-  }
-
-  .sp-step-lbl {
-    display: none;
-  }
+  .sp-tabs { flex-direction: column; }
+  .sp-tab { border-bottom: none; border-left: 3px solid transparent; }
+  .sp-tab.active { box-shadow: none; border-left-color: #1f7a6b; }
+  .sp-step-lbl { display: none; }
+  .sp-waste-grid { grid-template-columns: 1fr 1fr; }
 }
