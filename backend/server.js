@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const express  = require("express");
 const mongoose = require("mongoose");
-const cors     = require("cors");
 const http     = require("http");
 
 /* ── ROUTE IMPORTS ── */
@@ -17,36 +16,40 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes       = require("./routes/reportRoutes");
 const pickupRoutes       = require("./routes/pickupRoutes");
 const supportRoutes      = require("./routes/supportRoutes");
-const settingsRoutes     = require("./routes/settingsRoutes"); // ✅ NEW
+const settingsRoutes     = require("./routes/settingsRoutes");
 
 const { markMessagesReadSocket } = require("./controllers/messageController");
 
 const app    = express();
 const server = http.createServer(app);
 
-/* ── CORS ── */
+/* ─────────────────────────────────────────
+   CORS — manual middleware, no wildcard,
+   works on Express 4 + 5 / Node 22
+───────────────────────────────────────── */
 const allowedOrigins = [
   "http://localhost:5173",
   "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com",
 ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, Render health checks)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    console.log("❌ Blocked by CORS:", origin);
-    return callback(new Error("Not allowed by CORS"));
-  },
-  methods:        ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials:    true,
-};
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-app.use(cors(corsOptions));
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin",      origin || "*");
+  }
 
-// ✅ Explicitly handle OPTIONS preflight for every route
-app.options("/*splat", cors(corsOptions)); // ✅ Express 5 / path-to-regexp v8 compatible
+  res.setHeader("Access-Control-Allow-Methods",      "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers",      "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials",  "true");
+
+  // Answer preflight immediately — no route handler needed
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 
 /* ── MIDDLEWARE ── */
 app.use(express.json());
@@ -72,18 +75,12 @@ io.on("connection", (socket) => {
 
   socket.on("join", (userId) => {
     if (!userId) return;
-
     const roomId = userId.toString();
-
-    socket.rooms.forEach(room => {
-      if (room !== socket.id) socket.leave(room);
-    });
-
+    socket.rooms.forEach(room => { if (room !== socket.id) socket.leave(room); });
     socket.join(roomId);
     socket.userId = roomId;
     onlineUsers.set(roomId, socket.id);
-
-    io.emit("onlineUsers",  Array.from(onlineUsers.keys()));
+    io.emit("onlineUsers",     Array.from(onlineUsers.keys()));
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
   });
 
@@ -97,9 +94,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("typing", ({ sender, receiver }) => {
-    if (receiver) {
-      io.to(receiver.toString()).emit("typing", { sender });
-    }
+    if (receiver) io.to(receiver.toString()).emit("typing", { sender });
   });
 
   socket.on("disconnect", () => {
@@ -123,18 +118,18 @@ app.use("/api/messages",      messageRoutes);
 app.use("/api/reports",       reportRoutes);
 app.use("/api/pickups",       pickupRoutes(io));
 app.use("/api/support",       supportRoutes);
-app.use("/api/settings",      settingsRoutes); // ✅ NEW
+app.use("/api/settings",      settingsRoutes);
 
-/* ── TEST ROUTE ── */
+/* ── TEST ── */
 app.get("/", (req, res) => res.send("✅ API Running..."));
 
 /* ── DATABASE ── */
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("✅ MongoDB Connected"))
-.catch((err) => {
-  console.error("❌ MongoDB Error:", err.message);
-  process.exit(1);
-});
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB Error:", err.message);
+    process.exit(1);
+  });
 
 /* ── START ── */
 const PORT = process.env.PORT || 5001;
