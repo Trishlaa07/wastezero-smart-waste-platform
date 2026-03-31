@@ -3,7 +3,7 @@ import Layout from "../../components/Layout";
 import axios from "axios";
 import { useSocket } from "../../context/SocketContext";
 import { Pencil, Trash2, X } from "lucide-react";
-import "../../styles/SchedulePickup.css";
+import "../../styles/schedulePickup.css";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
 
