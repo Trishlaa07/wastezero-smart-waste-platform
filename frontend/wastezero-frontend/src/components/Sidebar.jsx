@@ -8,7 +8,7 @@ import {
   ChevronRight, Menu, X, PackageCheck,
 } from "lucide-react";
 import WasteZeroLogo from "../components/WasteZeroLogo";
-import "../styles/Sidebar.css";
+import "../styles/sidebar.css";
 
 function Sidebar() {
   const location  = useLocation();
