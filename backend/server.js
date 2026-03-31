@@ -23,22 +23,20 @@ const { markMessagesReadSocket } = require("./controllers/messageController");
 const app    = express();
 const server = http.createServer(app);
 
-/* ── ✅ CORS (FIXED) ── */
+/* ── ✅ CORS (FINAL FIX) ── */
 const allowedOrigins = [
   "http://localhost:5173",
   "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
 ];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS not allowed"));
-    }
-  },
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
+// ✅ VERY IMPORTANT (fixes your error)
+app.options("*", cors());
 
 /* ── MIDDLEWARE ── */
 app.use(express.json());
@@ -123,7 +121,7 @@ app.get("/", (req, res) => {
   res.send("✅ API Running...");
 });
 
-/* ── DATABASE (FINAL FIX) ── */
+/* ── DATABASE CONNECTION ── */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB Connected");
