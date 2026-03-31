@@ -34,7 +34,7 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error("❌ CORS Not Allowed"));
+      callback(new Error("CORS not allowed"));
     }
   },
   credentials: true
@@ -123,18 +123,15 @@ app.get("/", (req, res) => {
   res.send("✅ API Running...");
 });
 
-/* ── DATABASE (IMPROVED) ── */
+/* ── DATABASE (FINAL FIX) ── */
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => {
+  .then(() => {
+    console.log("✅ MongoDB Connected");
+  })
+  .catch((err) => {
     console.error("❌ MongoDB Error:", err.message);
     process.exit(1);
   });
-.then(() => console.log("✅ MongoDB Connected"))
-.catch(err => {
-  console.error("❌ MongoDB Error:", err.message);
-  process.exit(1); // stop app if DB fails
-});
 
 /* ── START SERVER ── */
 const PORT = process.env.PORT || 5001;
