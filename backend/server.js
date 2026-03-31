@@ -46,7 +46,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // ✅ Explicitly handle OPTIONS preflight for every route
-app.options("*", cors(corsOptions));
+app.options("/*splat", cors(corsOptions)); // ✅ Express 5 / path-to-regexp v8 compatible
 
 /* ── MIDDLEWARE ── */
 app.use(express.json());
