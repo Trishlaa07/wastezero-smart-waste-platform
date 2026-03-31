@@ -2,18 +2,16 @@ const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
-  // Use explicit host instead of service:"gmail"
-  // This lets us set the host to the IPv4-only address
-  host:   "smtp.gmail.com",
-  port:   465,
-  secure: true,          // SSL on port 465
-  family: 4,             // ✅ Force IPv4 — fixes ENETUNREACH on Render
+  host:   "74.125.135.108",  // smtp.gmail.com IPv4 — bypasses IPv6 DNS resolution
+  port:   587,
+  secure: false,             // STARTTLS on 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,  // App password WITHOUT spaces
   },
   tls: {
-    rejectUnauthorized: false,     // avoid cert issues on some hosts
+    rejectUnauthorized: false,
+    servername: "smtp.gmail.com",  // SNI still uses the correct hostname
   },
 });
 
