@@ -23,27 +23,20 @@ const { markMessagesReadSocket } = require("./controllers/messageController");
 const app    = express();
 const server = http.createServer(app);
 
-/* ── CORS CONFIG (FIXED) ── */
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
-];
-
+/* ── ✅ FIXED CORS (NO BLOCKING) ── */
 app.use(cors({
-  origin: function(origin, callback) {
-    // allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS not allowed"));
-    }
-  },
+  origin: [
+    "http://localhost:5173",
+    "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
+  ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
 }));
 
+/* OPTIONAL: handle preflight requests */
+app.options("*", cors());
+
+/* ── MIDDLEWARE ── */
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
@@ -52,7 +45,10 @@ const { Server } = require("socket.io");
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: [
+      "http://localhost:5173",
+      "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com"
+    ],
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -123,7 +119,10 @@ app.use("/api/reports",       reportRoutes);
 app.use("/api/pickups",       pickupRoutes(io));
 app.use("/api/support",       supportRoutes);
 
-app.get("/", (req, res) => res.send("API Running..."));
+/* ── TEST ROUTE ── */
+app.get("/", (req, res) => {
+  res.send("✅ API Running...");
+});
 
 /* ── DATABASE ── */
 mongoose.connect(process.env.MONGO_URI)
@@ -136,4 +135,3 @@ const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
