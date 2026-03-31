@@ -125,15 +125,13 @@ app.get("/", (req, res) => {
 });
 
 /* ── DATABASE CONNECTION ── */
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("✅ MongoDB Connected"))
-.catch((err) => {
-  console.error("❌ MongoDB Error:", err.message);
-  process.exit(1);
-});
+/* ── DATABASE CONNECTION ── */
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB Error:", err.message);
+    process.exit(1);
+  });
 
 /* ── START SERVER ── */
 const PORT = process.env.PORT || 5001;
