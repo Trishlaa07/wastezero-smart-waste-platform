@@ -1,9 +1,19 @@
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const transporter = require("../config/mailer");
-const jwt = require("jsonwebtoken");
-const axios = require("axios");
+const User         = require("../models/User");
+const bcrypt       = require("bcryptjs");
+const transporter  = require("../config/mailer");
+const jwt          = require("jsonwebtoken");
+const axios        = require("axios");
 const { createNotification } = require("./notificationController");
+
+/* ── Helper: send mail without crashing the route ── */
+const safeSendMail = async (options) => {
+  try {
+    await transporter.sendMail(options);
+    console.log("✅ EMAIL SENT to:", options.to);
+  } catch (err) {
+    console.log("⚠️ MAIL SEND FAILED (non-fatal):", err.message);
+  }
+};
 
 /* ================= REGISTER ================= */
 exports.registerUser = async (req, res) => {
@@ -32,8 +42,8 @@ exports.registerUser = async (req, res) => {
         const geoRes = await axios.get(
           "https://nominatim.openstreetmap.org/search",
           {
-            params: { q: location, format: "json", limit: 1 },
-            headers: { "User-Agent": "wastezero-app" }
+            params:  { q: location, format: "json", limit: 1 },
+            headers: { "User-Agent": "wastezero-app" },
           }
         );
         if (geoRes.data.length > 0) {
@@ -55,18 +65,18 @@ exports.registerUser = async (req, res) => {
       name,
       email,
       password,
-      role: role || "volunteer",
-      location: location || "",
+      role:        role || "volunteer",
+      location:    location || "",
       coordinates: { lat, lng },
       otp,
-      otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
+      otpExpiry:   new Date(Date.now() + 10 * 60 * 1000),
       otpAttempts: 0,
-      isVerified: false,
+      isVerified:  false,
     });
 
     await newUser.save();
 
-    /* ── NOTIFY ADMINS (new_user type with relatedId) ── */
+    /* ── NOTIFY ADMINS ── */
     if (newUser.role === "ngo" || newUser.role === "volunteer") {
       const admins = await User.find({ role: "admin" });
       for (const admin of admins) {
@@ -80,24 +90,25 @@ exports.registerUser = async (req, res) => {
       }
     }
 
-    /* ── SEND OTP EMAIL ── */
-    await transporter.sendMail({
-      from: `"WasteZero Team" <${process.env.EMAIL_USER}>`,
-      to: email,
+    /* ── SEND OTP EMAIL (non-fatal) ── */
+    await safeSendMail({
+      from:    `"WasteZero Team" <${process.env.EMAIL_USER}>`,
+      to:      email,
       subject: "🔒 Verify Your WasteZero Account",
       html: `
         <div style="font-family:'Segoe UI',sans-serif;background:#f9fafb;padding:20px;">
-          <div style="max-width:500px;margin:auto;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);padding:30px;text-align:center;">
+          <div style="max-width:500px;margin:auto;background:#fff;border-radius:12px;
+                      box-shadow:0 4px 12px rgba(0,0,0,0.1);padding:30px;text-align:center;">
             <h2 style="color:#111827;">Account Verification</h2>
             <p>Hello <strong>${name}</strong>, welcome to WasteZero.</p>
-            <div style="font-size:28px;font-weight:bold;letter-spacing:6px;color:#2f7d6b;">${otp}</div>
-            <p>This OTP expires in 10 minutes.</p>
+            <div style="font-size:28px;font-weight:bold;letter-spacing:6px;
+                        color:#134e5e;margin:20px 0;">${otp}</div>
+            <p style="color:#6b7280;font-size:13px;">This OTP expires in 10 minutes.</p>
           </div>
         </div>
       `,
     });
 
-    console.log("✅ REGISTER EMAIL SENT");
     res.status(201).json({ message: "OTP sent successfully" });
 
   } catch (error) {
@@ -119,9 +130,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     if (user.otpAttempts >= 5) {
-      return res.status(400).json({
-        message: "Too many attempts. Please resend OTP."
-      });
+      return res.status(400).json({ message: "Too many attempts. Please resend OTP." });
     }
 
     if (user.otp !== otp) {
@@ -152,21 +161,21 @@ exports.resendOtp = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "User not found" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    user.otp       = otp;
-    user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    const otp        = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp         = otp;
+    user.otpExpiry   = new Date(Date.now() + 10 * 60 * 1000);
     user.otpAttempts = 0;
     await user.save();
 
-    await transporter.sendMail({
-      from: `"WasteZero Team" <${process.env.EMAIL_USER}>`,
-      to: email,
+    console.log("RESEND OTP:", otp);
+
+    await safeSendMail({
+      from:    `"WasteZero Team" <${process.env.EMAIL_USER}>`,
+      to:      email,
       subject: "🔁 Your New WasteZero OTP",
-      html: `<h2>Your new OTP is ${otp}</h2>`,
+      html:    `<h2 style="color:#134e5e;">Your new OTP is: ${otp}</h2><p>Expires in 10 minutes.</p>`,
     });
 
-    console.log("✅ RESEND EMAIL SENT");
     res.json({ message: "OTP resent successfully" });
 
   } catch (error) {
@@ -175,12 +184,7 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-/* ================= LOGIN =================
-   Drop this loginUser export into your
-   existing authController.js, replacing
-   the current one.
-================================================ */
-
+/* ================= LOGIN ================= */
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -192,7 +196,6 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ message: "Verify OTP first" });
     }
 
-    /* ── Admin-imposed suspension — hard block ── */
     if (user.isSuspended) {
       return res.status(403).json({
         message: "Account suspended",
@@ -232,6 +235,7 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 /* ================= FORGOT PASSWORD ================= */
 exports.forgotPassword = async (req, res) => {
   try {
@@ -249,7 +253,7 @@ exports.forgotPassword = async (req, res) => {
       return res.status(403).json({ message: "Your account is suspended. Contact support." });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp        = Math.floor(100000 + Math.random() * 900000).toString();
     console.log("FORGOT PASSWORD OTP:", otp);
 
     user.otp         = otp;
@@ -257,16 +261,18 @@ exports.forgotPassword = async (req, res) => {
     user.otpAttempts = 0;
     await user.save();
 
-    await transporter.sendMail({
-      from: `"WasteZero Team" <${process.env.EMAIL_USER}>`,
-      to: email,
+    await safeSendMail({
+      from:    `"WasteZero Team" <${process.env.EMAIL_USER}>`,
+      to:      email,
       subject: "🔑 Reset Your WasteZero Password",
       html: `
         <div style="font-family:'Segoe UI',sans-serif;background:#f9fafb;padding:20px;">
-          <div style="max-width:500px;margin:auto;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);padding:30px;text-align:center;">
+          <div style="max-width:500px;margin:auto;background:#fff;border-radius:12px;
+                      box-shadow:0 4px 12px rgba(0,0,0,0.1);padding:30px;text-align:center;">
             <h2 style="color:#111827;">Password Reset</h2>
             <p>Hello <strong>${user.name}</strong>, use this OTP to reset your password.</p>
-            <div style="font-size:28px;font-weight:bold;letter-spacing:6px;color:#134e5e;margin:20px 0;">${otp}</div>
+            <div style="font-size:28px;font-weight:bold;letter-spacing:6px;
+                        color:#134e5e;margin:20px 0;">${otp}</div>
             <p style="color:#6b7280;font-size:13px;">This OTP expires in 10 minutes.</p>
           </div>
         </div>
