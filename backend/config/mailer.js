@@ -1,25 +1,37 @@
-const nodemailer = require("nodemailer");
-const dns        = require("dns");
 require("dotenv").config();
 
-// ✅ Force all DNS lookups to return IPv4 addresses
-dns.setDefaultResultOrder("ipv4first");
+// ✅ Brevo HTTP API — uses port 443, never blocked by Render free tier
+const Brevo = require("@getbrevo/brevo");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // App password WITHOUT spaces
+const apiInstance = new Brevo.TransactionalEmailsApi();
+apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
+
+const transporter = {
+
+  /* Drop-in replacement for nodemailer transporter.sendMail()
+     Accepts the same { from, to, subject, html } options */
+  sendMail: async ({ from, to, subject, html }) => {
+    const email = new Brevo.SendSmtpEmail();
+
+    email.sender       = { name: "WasteZero Team", email: process.env.EMAIL_USER };
+    email.to           = [{ email: to }];
+    email.subject      = subject;
+    email.htmlContent  = html;
+
+    return apiInstance.sendTransacEmail(email);
   },
-});
 
-/* 🔎 Verify connection on server start */
-transporter.verify((error, success) => {
-  if (error) {
-    console.log("❌ MAIL CONFIG ERROR:", error);
-  } else {
-    console.log("✅ Mail server is ready");
-  }
-});
+  // Called on server start to confirm config is valid
+  verify: (cb) => {
+    if (process.env.BREVO_API_KEY) {
+      console.log("✅ Mail server is ready (Brevo API)");
+      cb(null, true);
+    } else {
+      const err = new Error("BREVO_API_KEY is not set in environment");
+      console.log("❌ MAIL CONFIG ERROR:", err.message);
+      cb(err);
+    }
+  },
+};
 
 module.exports = transporter;
