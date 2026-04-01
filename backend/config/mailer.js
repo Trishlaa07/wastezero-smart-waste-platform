@@ -1,5 +1,9 @@
 const nodemailer = require("nodemailer");
+const dns        = require("dns");
 require("dotenv").config();
+
+// ✅ Force all DNS lookups to return IPv4 addresses
+dns.setDefaultResultOrder("ipv4first");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
