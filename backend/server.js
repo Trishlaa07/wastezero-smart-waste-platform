@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const express  = require("express");
 const mongoose = require("mongoose");
-const cors     = require("cors");
 const http     = require("http");
 
 /* ── ROUTE IMPORTS ── */
@@ -15,21 +14,44 @@ const adminRoutes        = require("./routes/adminRoutes");
 const applicationRoutes  = require("./routes/applicationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes       = require("./routes/reportRoutes");
-const pickupRoutes       = require("./routes/pickupRoutes"); // ← only once
-const supportRoutes = require("./routes/supportRoutes");
-
+const pickupRoutes       = require("./routes/pickupRoutes");
+const supportRoutes      = require("./routes/supportRoutes");
+const settingsRoutes     = require("./routes/settingsRoutes");
 
 const { markMessagesReadSocket } = require("./controllers/messageController");
 
 const app    = express();
 const server = http.createServer(app);
 
+/* ─────────────────────────────────────────
+   CORS — manual middleware, no wildcard,
+   works on Express 4 + 5 / Node 22
+───────────────────────────────────────── */
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://wastezero-smart-waste-platform-frontend-c14z.onrender.com",
+];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin",      origin || "*");
+  }
+
+  res.setHeader("Access-Control-Allow-Methods",      "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers",      "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials",  "true");
+
+  // Answer preflight immediately — no route handler needed
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
 /* ── MIDDLEWARE ── */
-app.use(cors({
-  origin:      "http://localhost:5173",
-  methods:     ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true,
-}));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
@@ -38,8 +60,9 @@ const { Server } = require("socket.io");
 
 const io = new Server(server, {
   cors: {
-    origin:  "http://localhost:5173",
-    methods: ["GET", "POST"],
+    origin:      allowedOrigins,
+    methods:     ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -53,18 +76,12 @@ io.on("connection", (socket) => {
   socket.on("join", (userId) => {
     if (!userId) return;
     const roomId = userId.toString();
-
-    socket.rooms.forEach(room => {
-      if (room !== socket.id) socket.leave(room);
-    });
-
+    socket.rooms.forEach(room => { if (room !== socket.id) socket.leave(room); });
     socket.join(roomId);
     socket.userId = roomId;
     onlineUsers.set(roomId, socket.id);
-
-    io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+    io.emit("onlineUsers",     Array.from(onlineUsers.keys()));
     socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
-    console.log(`✅ User ${roomId} joined. Online: ${onlineUsers.size}`);
   });
 
   socket.on("getOnlineUsers", () => {
@@ -85,8 +102,6 @@ io.on("connection", (socket) => {
       onlineUsers.delete(socket.userId);
       io.emit("onlineUsers", Array.from(onlineUsers.keys()));
       console.log(`❌ User ${socket.userId} disconnected`);
-    } else {
-      console.log("❌ Socket disconnected:", socket.id);
     }
   });
 });
@@ -101,15 +116,20 @@ app.use("/api/applications",  applicationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages",      messageRoutes);
 app.use("/api/reports",       reportRoutes);
-app.use("/api/pickups",       pickupRoutes(io)); // ← only once, io passed correctly
-app.use("/api/support", supportRoutes);
+app.use("/api/pickups",       pickupRoutes(io));
+app.use("/api/support",       supportRoutes);
+app.use("/api/settings",      settingsRoutes);
 
-app.get("/", (req, res) => res.send("API Running..."));
+/* ── TEST ── */
+app.get("/", (req, res) => res.send("✅ API Running..."));
 
 /* ── DATABASE ── */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error("❌ MongoDB Error:", err));
+  .catch((err) => {
+    console.error("❌ MongoDB Error:", err.message);
+    process.exit(1);
+  });
 
 /* ── START ── */
 const PORT = process.env.PORT || 5001;

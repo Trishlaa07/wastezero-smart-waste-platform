@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 const SocketContext = createContext(null);
 
-const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
+const API = import.meta.env.VITE_API_URL ?? "https://wastezero-smart-waste-platform-backend-4wcw.onrender.com";
 
 export function SocketProvider({ children }) {
   const socketRef = useRef(null);
