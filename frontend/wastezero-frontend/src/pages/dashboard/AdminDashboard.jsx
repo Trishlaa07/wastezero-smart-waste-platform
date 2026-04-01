@@ -12,6 +12,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, LineChart, Line
 } from "recharts";
+import PageLoader from "../components/PageLoader";
 import "../../styles/dashboard.css";
 import "../../styles/adminDashboard.css";
 
@@ -52,7 +53,7 @@ function AdminDashboard() {
     fetchAll();
   }, [token]);
 
-  if (loading) return <Layout><p style={{ padding: 40 }}>Loading...</p></Layout>;
+  if (loading) return <PageLoader text="Loading dashboard..." />
   if (!stats)  return null;
 
   const pendingReports = reports.filter(r => r.status === "pending").length;
