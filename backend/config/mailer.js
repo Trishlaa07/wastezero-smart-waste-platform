@@ -1,7 +1,8 @@
 require("dotenv").config();
 const axios = require("axios");
 
-// ✅ Brevo REST API via axios — no extra package, uses HTTPS port 443
+// ✅ Brevo REST API — HTTPS port 443, never blocked by Render
+// ✅ 10s timeout so failures are fast, not hanging
 const transporter = {
 
   sendMail: async ({ from, to, subject, html }) => {
@@ -15,9 +16,11 @@ const transporter = {
       },
       {
         headers: {
-          "api-key":     process.env.BREVO_API_KEY,
+          "api-key":      process.env.BREVO_API_KEY,
           "Content-Type": "application/json",
+          "Accept":       "application/json",
         },
+        timeout: 10000, // ✅ fail fast after 10s instead of hanging forever
       }
     );
   },
