@@ -371,7 +371,7 @@ function Opportunities() {
               filtered.map((opp) => (
                 <div key={opp._id} className="opportunity-card">
                   <img
-                    src={opp.image ? `${API}/uploads/${opp.image}` : "/no-image.png"}
+                    src={opp.image || "/no-image.png"}
                     alt="opportunity"
                     className="opportunity-image"
                   />
