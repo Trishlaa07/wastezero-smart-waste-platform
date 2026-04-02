@@ -123,6 +123,9 @@ app.use("/api/settings",      settingsRoutes);
 /* ── TEST ── */
 app.get("/", (req, res) => res.send("✅ API Running..."));
 
+/* ── HEALTH CHECK ── */
+app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
 /* ── DATABASE ── */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))

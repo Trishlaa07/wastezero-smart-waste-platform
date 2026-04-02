@@ -1,38 +1,33 @@
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { SocketProvider, useSocket } from "./context/SocketContext";
-import { useEffect, useState } from "react";
 import PageLoader from "./components/PageLoader";
 
-import Register from "./pages/Register.jsx";
-import Login from "./pages/Login.jsx";
-import VerifyOtp from "./pages/VerifyOtp.jsx";
-import ForgotPassword from "./pages/ForgotPassword.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import Profile from "./pages/Profile.jsx";
-import Opportunities from "./pages/Opportunities.jsx";
-import CreateOpportunity from "./pages/CreateOpportunity.jsx";
-import OpportunityDetails from "./pages/OpportunityDetails.jsx";
-import EditOpportunity from "./pages/EditOpportunity.jsx";
-
-import VolunteerDashboard from "./pages/dashboard/VolunteerDashboard.jsx";
-import NgoDashboard from "./pages/dashboard/NgoDashboard.jsx";
-import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
-
-import UsersPage from "./pages/admin/UsersPage";
-import Reports from "./pages/admin/Reports";
-import Moderation from "./pages/admin/Moderation";
-import PlatformControl from "./pages/admin/PlatformControl";
-import AdminSupport from "./pages/admin/AdminSupport";
-
-import SchedulePickup from "./pages/volunteer/SchedulePickup";
-import ManagePickups from "./pages/ngo/ManagePickups";
-
-import Applications from "./pages/ngo/Applications";
-import Messages from "./pages/Messages";
-
-import Settings from "./pages/Settings";
-import Support from "./pages/Support";
-import WasteStatistics from "./pages/volunteer/WasteStatistics";
+const Register           = lazy(() => import("./pages/Register"));
+const Login              = lazy(() => import("./pages/Login"));
+const VerifyOtp          = lazy(() => import("./pages/VerifyOtp"));
+const ForgotPassword     = lazy(() => import("./pages/ForgotPassword"));
+const Dashboard          = lazy(() => import("./pages/Dashboard"));
+const Profile            = lazy(() => import("./pages/Profile"));
+const Opportunities      = lazy(() => import("./pages/Opportunities"));
+const CreateOpportunity  = lazy(() => import("./pages/CreateOpportunity"));
+const OpportunityDetails = lazy(() => import("./pages/OpportunityDetails"));
+const EditOpportunity    = lazy(() => import("./pages/EditOpportunity"));
+const VolunteerDashboard = lazy(() => import("./pages/dashboard/VolunteerDashboard"));
+const NgoDashboard       = lazy(() => import("./pages/dashboard/NgoDashboard"));
+const AdminDashboard     = lazy(() => import("./pages/dashboard/AdminDashboard"));
+const UsersPage          = lazy(() => import("./pages/admin/UsersPage"));
+const Reports            = lazy(() => import("./pages/admin/Reports"));
+const Moderation         = lazy(() => import("./pages/admin/Moderation"));
+const PlatformControl    = lazy(() => import("./pages/admin/PlatformControl"));
+const AdminSupport       = lazy(() => import("./pages/admin/AdminSupport"));
+const SchedulePickup     = lazy(() => import("./pages/volunteer/SchedulePickup"));
+const ManagePickups      = lazy(() => import("./pages/ngo/ManagePickups"));
+const Applications       = lazy(() => import("./pages/ngo/Applications"));
+const Messages           = lazy(() => import("./pages/Messages"));
+const Settings           = lazy(() => import("./pages/Settings"));
+const Support            = lazy(() => import("./pages/Support"));
+const WasteStatistics    = lazy(() => import("./pages/volunteer/WasteStatistics"));
 
 function RouteLoader({ children }) {
   const location = useLocation();
@@ -95,44 +90,45 @@ function App() {
   return (
     <SocketProvider>
       <BrowserRouter>
-        <RouteLoader>
-          <SuspensionWatcher />
-          <Routes>
-            <Route path="/"                element={<Navigate to="/register" />} />
-            <Route path="/register"        element={<Register />} />
-            <Route path="/login"           element={<Login />} />
-            <Route path="/verify"          element={<VerifyOtp />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Suspense fallback={<PageLoader />}>
+          <RouteLoader>
+            <SuspensionWatcher />
+            <Routes>
+              <Route path="/"                element={<Navigate to="/register" />} />
+              <Route path="/register"        element={<Register />} />
+              <Route path="/login"           element={<Login />} />
+              <Route path="/verify"          element={<VerifyOtp />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard"           element={<Dashboard />} />
+              <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
+              <Route path="/ngo-dashboard"       element={<NgoDashboard />} />
+              <Route path="/admin-dashboard"     element={<AdminDashboard />} />
 
-            <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
-            <Route path="/ngo-dashboard"       element={<NgoDashboard />} />
-            <Route path="/admin-dashboard"     element={<AdminDashboard />} />
+              <Route path="/profile"              element={<Profile />} />
+              <Route path="/opportunities"        element={<Opportunities />} />
+              <Route path="/create-opportunity"   element={<CreateOpportunity />} />
+              <Route path="/opportunity/:id"      element={<OpportunityDetails />} />
+              <Route path="/edit-opportunity/:id" element={<EditOpportunity />} />
 
-            <Route path="/profile"              element={<Profile />} />
-            <Route path="/opportunities"        element={<Opportunities />} />
-            <Route path="/create-opportunity"   element={<CreateOpportunity />} />
-            <Route path="/opportunity/:id"      element={<OpportunityDetails />} />
-            <Route path="/edit-opportunity/:id" element={<EditOpportunity />} />
+              <Route path="/users"           element={<UsersPage />} />
+              <Route path="/reports"         element={<Reports />} />
+              <Route path="/moderation"      element={<Moderation />} />
+              <Route path="/platform-health" element={<PlatformControl />} />
+              <Route path="/admin/support"   element={<AdminSupport />} />
 
-            <Route path="/users"           element={<UsersPage />} />
-            <Route path="/reports"         element={<Reports />} />
-            <Route path="/moderation"      element={<Moderation />} />
-            <Route path="/platform-health" element={<PlatformControl />} />
-            <Route path="/admin/support"   element={<AdminSupport />} />
+              <Route path="/schedule"        element={<SchedulePickup />} />
+              <Route path="/impact"          element={<WasteStatistics />} />
 
-            <Route path="/schedule"        element={<SchedulePickup />} />
-            <Route path="/impact"          element={<WasteStatistics />} />
+              <Route path="/manage-pickups"  element={<ManagePickups />} />
+              <Route path="/applications"    element={<Applications />} />
 
-            <Route path="/manage-pickups"  element={<ManagePickups />} />
-            <Route path="/applications"    element={<Applications />} />
-
-            <Route path="/messages"  element={<Messages />} />
-            <Route path="/settings"  element={<Settings />} />
-            <Route path="/support"   element={<Support />} />
-          </Routes>
-        </RouteLoader>
+              <Route path="/messages"  element={<Messages />} />
+              <Route path="/settings"  element={<Settings />} />
+              <Route path="/support"   element={<Support />} />
+            </Routes>
+          </RouteLoader>
+        </Suspense>
       </BrowserRouter>
     </SocketProvider>
   );
