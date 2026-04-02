@@ -4,8 +4,6 @@ const User = require("../models/User");
 const Opportunity = require("../models/Opportunity");
 const Application = require("../models/Application");
 const { createNotification } = require("./notificationController");
-const fs = require("fs");
-const path = require("path");
 
 /* ==============================
    CREATE OPPORTUNITY
@@ -15,7 +13,7 @@ exports.createOpportunity = async (req, res) => {
     const {
       title, description, requiredSkills, duration,
       city, state, country, location, date, volunteersNeeded,
-      lat: bodyLat, lng: bodyLng   // ✅ from map picker if used
+      lat: bodyLat, lng: bodyLng
     } = req.body;
 
     let skillsArray = [];
@@ -30,7 +28,6 @@ exports.createOpportunity = async (req, res) => {
     let lat = bodyLat ? parseFloat(bodyLat) : null;
     let lng = bodyLng ? parseFloat(bodyLng) : null;
 
-    // ✅ Only geocode if coordinates were NOT supplied by the map picker
     if (!lat && finalLocation) {
       try {
         const geoRes = await axios.get(
@@ -62,7 +59,7 @@ exports.createOpportunity = async (req, res) => {
       date,
       volunteersNeeded: volunteersNeeded || 1,
       coordinates:      { lat, lng },
-      image:            req.file ? req.file.filename : "",
+      image:            req.file ? req.file.path : "",  // ✅ full Cloudinary URL
       isHidden:         false,
       reportCount:      0
     });
@@ -247,9 +244,8 @@ exports.updateOpportunity = async (req, res) => {
     if (req.body.date)             opportunity.date             = req.body.date;
     if (req.body.status)           opportunity.status           = req.body.status;
     if (req.body.volunteersNeeded) opportunity.volunteersNeeded = req.body.volunteersNeeded;
-    if (req.file)                  opportunity.image            = req.file.filename;
+    if (req.file)                  opportunity.image            = req.file.path; // ✅ full Cloudinary URL
 
-    // ✅ Update location fields
     const newCity    = req.body.city    ?? opportunity.city;
     const newState   = req.body.state   ?? opportunity.state;
     const newCountry = req.body.country ?? opportunity.country;
@@ -263,14 +259,12 @@ exports.updateOpportunity = async (req, res) => {
     opportunity.country  = newCountry;
     opportunity.location = newLocation;
 
-    // ✅ If map picker sent coordinates, use them directly
     if (req.body.lat && req.body.lng) {
       opportunity.coordinates = {
         lat: parseFloat(req.body.lat),
         lng: parseFloat(req.body.lng)
       };
     } else if (locationChanged && newLocation) {
-      // Fallback: geocode from text if location changed without map
       try {
         const geoRes = await axios.get(
           "https://nominatim.openstreetmap.org/search",
@@ -317,11 +311,6 @@ exports.deleteOpportunity = async (req, res) => {
       return res.status(403).json({
         message: "You can delete only your own opportunities"
       });
-    }
-
-    if (opportunity.image) {
-      const imagePath = path.join(__dirname, "../uploads", opportunity.image);
-      if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
     }
 
     await opportunity.deleteOne();
