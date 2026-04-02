@@ -11,6 +11,13 @@ import {
 import "../styles/OpportunityDetails.css";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
+const CLOUD_NAME = "dxuxhzonb";
+
+const getImageUrl = (image) => {
+  if (!image) return "/no-image.png";
+  if (image.startsWith("http")) return image;
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${image}`;
+};
 
 function OpportunityDetails() {
   const { id }   = useParams();
@@ -40,14 +47,12 @@ function OpportunityDetails() {
   const [reportSuccess,    setReportSuccess]    = useState(false);
   const [reportError,      setReportError]      = useState("");
 
-  /* ── Derived ── */
   const spotsLeft = opportunity
     ? Math.max(0, (opportunity.volunteersNeeded || 1) - (opportunity.applicantCount || 0))
     : null;
 
   const isFull = spotsLeft === 0;
 
-  /* ── Fetch opportunity + check application ── */
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -79,7 +84,6 @@ function OpportunityDetails() {
     fetchData();
   }, [id, token, user?.role]);
 
-  /* ── Real-time: applicant count update ── */
   useEffect(() => {
     if (!socket) return;
 
@@ -95,7 +99,6 @@ function OpportunityDetails() {
     return () => socket.off("opportunityCountUpdated", handleCountUpdate);
   }, [socket, id]);
 
-  /* ── Delete ── */
   const handleDelete = async () => {
     try {
       await axios.delete(
@@ -108,7 +111,6 @@ function OpportunityDetails() {
     }
   };
 
-  /* ── Apply ── */
   const applyToOpportunity = async () => {
     try {
       await axios.post(
@@ -127,7 +129,6 @@ function OpportunityDetails() {
     }
   };
 
-  /* ── Chat ── */
   const openChat = () => {
     navigate("/messages", {
       state: {
@@ -138,7 +139,6 @@ function OpportunityDetails() {
     });
   };
 
-  /* ── Report ── */
   const submitReport = async () => {
     if (!reportReason) {
       setReportError("Please select a reason.");
@@ -166,7 +166,6 @@ function OpportunityDetails() {
     }
   };
 
-  /* ── Close report modal & reset all state ── */
   const closeReportModal = () => {
     setShowReportModal(false);
     setReportReason("");
@@ -195,14 +194,12 @@ function OpportunityDetails() {
           <div>
             <div className="image-wrapper">
               <img
-                src={
-                  opportunity.image || "/no-image.png"
-                }
+                src={getImageUrl(opportunity.image)}
                 alt="opportunity"
                 className="details-image"
+                onError={(e) => { e.target.src = "/no-image.png"; }}
               />
 
-              {/* 3-DOT MENU */}
               <div className="menu-wrapper">
                 <MoreVertical
                   size={22}
@@ -260,7 +257,6 @@ function OpportunityDetails() {
               </span>
             </div>
 
-            {/* SPOTS PROGRESS BAR */}
             <div className="spots-bar-wrapper">
               <div className="spots-bar">
                 <div
@@ -282,7 +278,6 @@ function OpportunityDetails() {
               </span>
             </div>
 
-            {/* NGO BOX */}
             <div className="ngo-box">
               <div className="ngo-header">
                 <div>
@@ -301,7 +296,6 @@ function OpportunityDetails() {
               </div>
             </div>
 
-            {/* SKILLS */}
             {opportunity.requiredSkills?.length > 0 && (
               <>
                 <h4 className="skills-heading">Required Skills</h4>
@@ -313,7 +307,6 @@ function OpportunityDetails() {
               </>
             )}
 
-            {/* APPLY BUTTON — volunteers only */}
             {user?.role === "volunteer" && !loadingApplication && (
               <div className="apply-section">
                 {applied ? (
@@ -337,14 +330,11 @@ function OpportunityDetails() {
               </div>
             )}
 
-            {/* EDIT / DELETE — NGO + admin */}
             {(user?.role === "admin" || user?.role === "ngo") && (
               <div className="details-actions">
                 <button
                   className="edit-btn"
-                  onClick={() =>
-                    navigate(`/edit-opportunity/${opportunity._id}`)
-                  }
+                  onClick={() => navigate(`/edit-opportunity/${opportunity._id}`)}
                 >
                   <Pencil size={16} /> Edit
                 </button>
@@ -402,28 +392,24 @@ function OpportunityDetails() {
           </div>
         )}
 
-        {/* ── REPORT MODAL ── */}
+        {/* REPORT MODAL */}
         {showReportModal && (
-          /* ✅ Click on overlay closes modal */
           <div className="delete-modal-overlay" onClick={closeReportModal}>
             <div
               className="delete-modal report-modal-inner"
-              onClick={e => e.stopPropagation()} // prevent overlay click from bubbling
+              onClick={e => e.stopPropagation()}
             >
-              {/* ✅ X close button — always visible top-right */}
               <button className="report-modal-close" onClick={closeReportModal}>
                 <X size={18} />
               </button>
 
               {reportSuccess ? (
-                /* SUCCESS STATE */
                 <div className="report-success">
                   <CheckCircle size={44} className="report-success-icon" />
                   <h3>Report Submitted</h3>
                   <p>Thank you. Our team will review this opportunity shortly.</p>
                 </div>
               ) : (
-                /* FORM STATE */
                 <>
                   <h3>Report Opportunity</h3>
 
@@ -475,7 +461,6 @@ function OpportunityDetails() {
                   </div>
                 </>
               )}
-
             </div>
           </div>
         )}

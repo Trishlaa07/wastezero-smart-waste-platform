@@ -7,6 +7,13 @@ import { useSocket } from "../context/SocketContext";
 import "../styles/Opportunities.css";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5001";
+const CLOUD_NAME = "dxuxhzonb";
+
+const getImageUrl = (image) => {
+  if (!image) return "/no-image.png";
+  if (image.startsWith("http")) return image;
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${image}`;
+};
 
 function Opportunities() {
   const navigate = useNavigate();
@@ -17,7 +24,7 @@ function Opportunities() {
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState("");
   const [showFilters, setShowFilters]     = useState(false);
-  const [autoMatch, setAutoMatch]         = useState(true); // loaded from backend
+  const [autoMatch, setAutoMatch]         = useState(true);
 
   const token = localStorage.getItem("token");
 
@@ -45,7 +52,6 @@ function Opportunities() {
     { v: "all", label: "Any distance"  },
   ];
 
-  // ── Load autoMatch preference from backend ──
   useEffect(() => {
     if (!token || !isVolunteer) return;
     axios.get(`${API}/api/settings/preferences`, {
@@ -55,7 +61,7 @@ function Opportunities() {
       const am = res.data.data?.autoMatch;
       if (am !== undefined) setAutoMatch(am);
     })
-    .catch(() => {}); // silently fall back to true
+    .catch(() => {});
   }, [token, isVolunteer]);
 
   const timeAgo = (date) => {
@@ -80,10 +86,8 @@ function Opportunities() {
         url = `${API}/api/opportunities/my`;
       } else if (user?.role === "volunteer") {
         if (!autoMatch) {
-          // Auto-match OFF → show all opportunities, no skill filtering
           url = `${API}/api/opportunities`;
         } else {
-          // Auto-match ON → use matched endpoint (respects distance)
           url = distFilter === "all"
             ? `${API}/api/opportunities`
             : `${API}/api/opportunities/matched`;
@@ -148,7 +152,6 @@ function Opportunities() {
     if (statusFilter !== "all")
       list = list.filter(o => o.status === statusFilter);
 
-    // Only apply skill match filter when autoMatch is ON
     if (isVolunteer && autoMatch && matchFilter !== "all") {
       list = list.filter(o => {
         const m = o.skillMatch || 0;
@@ -165,12 +168,11 @@ function Opportunities() {
     }
 
     list.sort((a, b) => {
-      // When autoMatch is OFF, default sort is date not match score
-      if (sortBy === "match" && autoMatch) return (b.skillMatch || 0) - (a.skillMatch || 0);
+      if (sortBy === "match" && autoMatch)  return (b.skillMatch || 0) - (a.skillMatch || 0);
       if (sortBy === "match" && !autoMatch) return new Date(b.createdAt) - new Date(a.createdAt);
-      if (sortBy === "date")               return new Date(b.createdAt) - new Date(a.createdAt);
-      if (sortBy === "date_asc")           return new Date(a.createdAt) - new Date(b.createdAt);
-      if (sortBy === "distance")           return (a.distance ?? 9999) - (b.distance ?? 9999);
+      if (sortBy === "date")                return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sortBy === "date_asc")            return new Date(a.createdAt) - new Date(b.createdAt);
+      if (sortBy === "distance")            return (a.distance ?? 9999) - (b.distance ?? 9999);
       return 0;
     });
 
@@ -213,7 +215,6 @@ function Opportunities() {
             </p>
           </div>
 
-          {/* Auto-match badge for volunteers */}
           {isVolunteer && (
             <div className={`automatch-badge ${autoMatch ? "on" : "off"}`}>
               {autoMatch ? "🔥 Auto-match ON" : "All opportunities"}
@@ -288,7 +289,6 @@ function Opportunities() {
               </div>
             </div>
 
-            {/* Skill match filter only shown when autoMatch is ON */}
             {isVolunteer && autoMatch && (
               <div className="filter-group">
                 <p className="filter-label">Skill Match</p>
@@ -371,9 +371,10 @@ function Opportunities() {
               filtered.map((opp) => (
                 <div key={opp._id} className="opportunity-card">
                   <img
-                    src={opp.image || "/no-image.png"}
+                    src={getImageUrl(opp.image)}
                     alt="opportunity"
                     className="opportunity-image"
+                    onError={(e) => { e.target.src = "/no-image.png"; }}
                   />
 
                   <span className={`status-badge ${opp.status}`}>{opp.status}</span>
@@ -395,7 +396,6 @@ function Opportunities() {
                       <p className="posted-date">Posted {timeAgo(opp.createdAt)}</p>
                     </div>
 
-                    {/* Only show skill match bar when autoMatch is ON */}
                     {isVolunteer && autoMatch && (
                       <>
                         <p className={`match-score ${opp.skillMatch === 0 ? "suggested" : ""}`}>
