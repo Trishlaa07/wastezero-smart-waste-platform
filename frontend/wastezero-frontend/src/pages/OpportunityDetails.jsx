@@ -196,9 +196,7 @@ function OpportunityDetails() {
             <div className="image-wrapper">
               <img
                 src={
-                  opportunity.image
-                    ? `${API}/uploads/${opportunity.image}`
-                    : "/no-image.png"
+                  opportunity.image || "/no-image.png"
                 }
                 alt="opportunity"
                 className="details-image"
