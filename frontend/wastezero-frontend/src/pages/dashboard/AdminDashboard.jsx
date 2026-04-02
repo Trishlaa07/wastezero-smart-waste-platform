@@ -12,7 +12,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, LineChart, Line
 } from "recharts";
-import PageLoader from "../components/PageLoader";
 import "../../styles/dashboard.css";
 import "../../styles/adminDashboard.css";
 
@@ -53,7 +52,7 @@ function AdminDashboard() {
     fetchAll();
   }, [token]);
 
-  if (loading) return <PageLoader text="Loading dashboard..." />
+  if (loading) return null;
   if (!stats)  return null;
 
   const pendingReports = reports.filter(r => r.status === "pending").length;
@@ -77,9 +76,9 @@ function AdminDashboard() {
   ];
 
   const quickLinks = [
-    { label: "Monitor Users",   icon: Users,       path: "/users",      color: "#1976d2" },
-    { label: "Moderation",      icon: ShieldAlert, path: "/moderation", color: "#e03131" },
-    { label: "Reports",         icon: Flag,        path: "/reports",    color: "#f59e0b" },
+    { label: "Monitor Users",   icon: Users,       path: "/users",         color: "#1976d2" },
+    { label: "Moderation",      icon: ShieldAlert, path: "/moderation",    color: "#e03131" },
+    { label: "Reports",         icon: Flag,        path: "/reports",       color: "#f59e0b" },
     { label: "Opportunities",   icon: Briefcase,   path: "/opportunities", color: "#1D9E75" },
   ];
 
@@ -87,7 +86,6 @@ function AdminDashboard() {
     <Layout>
       <div className="adm-container">
 
-        {/* HEADER */}
         <div className="adm-header">
           <div>
             <h2 className="adm-title">Admin Control Center</h2>
@@ -97,12 +95,8 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* REPORTS ALERT BANNER */}
         {pendingReports > 0 && (
-          <div
-            className="adm-alert-banner"
-            onClick={() => navigate("/moderation")}
-          >
+          <div className="adm-alert-banner" onClick={() => navigate("/moderation")}>
             <AlertTriangle size={16} />
             <span>
               {pendingReports} pending report{pendingReports > 1 ? "s" : ""} require your attention
@@ -111,14 +105,10 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* KPI CARDS */}
         <div className="adm-kpi-grid">
           {kpis.map((k, i) => (
             <div key={i} className="adm-kpi-card">
-              <div
-                className="adm-kpi-icon"
-                style={{ background: k.color + "18", color: k.color }}
-              >
+              <div className="adm-kpi-icon" style={{ background: k.color + "18", color: k.color }}>
                 <k.icon size={18} />
               </div>
               <div>
@@ -129,18 +119,10 @@ function AdminDashboard() {
           ))}
         </div>
 
-        {/* QUICK LINKS */}
         <div className="adm-quick-links">
           {quickLinks.map((q, i) => (
-            <div
-              key={i}
-              className="adm-quick-card"
-              onClick={() => navigate(q.path)}
-            >
-              <div
-                className="adm-quick-icon"
-                style={{ background: q.color + "18", color: q.color }}
-              >
+            <div key={i} className="adm-quick-card" onClick={() => navigate(q.path)}>
+              <div className="adm-quick-icon" style={{ background: q.color + "18", color: q.color }}>
                 <q.icon size={20} />
               </div>
               <span className="adm-quick-label">{q.label}</span>
@@ -148,10 +130,7 @@ function AdminDashboard() {
           ))}
         </div>
 
-        {/* CHARTS */}
         <div className="adm-charts-row">
-
-          {/* MONTHLY GROWTH LINE CHART */}
           <div className="adm-chart-card">
             <h3>Monthly Growth</h3>
             <ResponsiveContainer width="100%" height={260}>
@@ -161,35 +140,20 @@ function AdminDashboard() {
                 <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="Volunteers"
-                  stroke="#1D9E75"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Opportunities"
-                  stroke="#1976d2"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
+                <Line type="monotone" dataKey="Volunteers"    stroke="#1D9E75" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="Opportunities" stroke="#1976d2" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* OPPORTUNITIES BAR CHART */}
           <div className="adm-chart-card">
             <h3>Opportunities Overview</h3>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart
                 data={[
-                  { name: "Total",  value: stats.totalOpportunities,                                   fill: "#1976d2" },
-                  { name: "Open",   value: stats.openOpportunities,                                    fill: "#1D9E75" },
-                  { name: "Closed", value: stats.totalOpportunities - stats.openOpportunities,         fill: "#e03131" },
+                  { name: "Total",  value: stats.totalOpportunities },
+                  { name: "Open",   value: stats.openOpportunities  },
+                  { name: "Closed", value: stats.totalOpportunities - stats.openOpportunities },
                 ]}
                 barSize={48}
               >
@@ -197,22 +161,12 @@ function AdminDashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="value" radius={[6,6,0,0]}>
-                  {[
-                    { fill: "#1976d2" },
-                    { fill: "#1D9E75" },
-                    { fill: "#e03131" },
-                  ].map((entry, i) => (
-                    <rect key={i} fill={entry.fill} />
-                  ))}
-                </Bar>
+                <Bar dataKey="value" radius={[6,6,0,0]} fill="#1D9E75" />
               </BarChart>
             </ResponsiveContainer>
           </div>
-
         </div>
 
-        {/* RECENT ACTIVITY FEED */}
         <div className="adm-activity-card">
           <h3>Recent Reports</h3>
           {reports.length === 0 ? (
@@ -229,18 +183,13 @@ function AdminDashboard() {
                     </p>
                     <p className="adm-activity-reason">{r.reason}</p>
                   </div>
-                  <span className={`adm-activity-status ${r.status}`}>
-                    {r.status}
-                  </span>
+                  <span className={`adm-activity-status ${r.status}`}>{r.status}</span>
                 </div>
               ))}
             </div>
           )}
           {reports.length > 6 && (
-            <button
-              className="adm-see-all"
-              onClick={() => navigate("/moderation")}
-            >
+            <button className="adm-see-all" onClick={() => navigate("/moderation")}>
               See all reports →
             </button>
           )}

@@ -1,14 +1,10 @@
 import "../styles/PageLoader.css";
 
-function PageLoader({ text = "Loading..." }) {
+function PageLoader() {
   return (
-    <div className="page-loader">
-      <div className="loader-content">
-        <div className="loader-ring">
-          <div /><div /><div /><div />
-        </div>
-        <p className="loader-text">{text}</p>
-      </div>
+    <div className="pageloader-overlay">
+      <div className="recycle-spinner">♻</div>
+      <p className="pageloader-text">Loading...</p>
     </div>
   );
 }

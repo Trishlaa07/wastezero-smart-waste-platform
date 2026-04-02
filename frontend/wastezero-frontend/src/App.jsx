@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { SocketProvider, useSocket } from "./context/SocketContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import PageLoader from "./components/PageLoader";
 
 import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
@@ -24,7 +25,7 @@ import PlatformControl from "./pages/admin/PlatformControl";
 import AdminSupport from "./pages/admin/AdminSupport";
 
 import SchedulePickup from "./pages/volunteer/SchedulePickup";
-import ManagePickups from "./pages/ngo/ManagePickups";   // ← added
+import ManagePickups from "./pages/ngo/ManagePickups";
 
 import Applications from "./pages/ngo/Applications";
 import Messages from "./pages/Messages";
@@ -33,11 +34,24 @@ import Settings from "./pages/Settings";
 import Support from "./pages/Support";
 import WasteStatistics from "./pages/volunteer/WasteStatistics";
 
-/* ─────────────────────────────────────────
-   Listens for auto-suspension and kicks the
-   currently logged-in user out immediately
-   if it is their account that was suspended.
-───────────────────────────────────────────*/
+function RouteLoader({ children }) {
+  const location = useLocation();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
+  return (
+    <>
+      {loading && <PageLoader />}
+      {children}
+    </>
+  );
+}
+
 function SuspensionWatcher() {
   const socket   = useSocket();
   const navigate = useNavigate();
@@ -81,52 +95,44 @@ function App() {
   return (
     <SocketProvider>
       <BrowserRouter>
-        {/* Must be inside BrowserRouter so useNavigate works */}
-        <SuspensionWatcher />
+        <RouteLoader>
+          <SuspensionWatcher />
+          <Routes>
+            <Route path="/"                element={<Navigate to="/register" />} />
+            <Route path="/register"        element={<Register />} />
+            <Route path="/login"           element={<Login />} />
+            <Route path="/verify"          element={<VerifyOtp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Routes>
-          {/* Auth */}
-          <Route path="/"                element={<Navigate to="/register" />} />
-          <Route path="/register"        element={<Register />} />
-          <Route path="/login"           element={<Login />} />
-          <Route path="/verify"          element={<VerifyOtp />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* Role-based dashboard redirect */}
-          <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
+            <Route path="/ngo-dashboard"       element={<NgoDashboard />} />
+            <Route path="/admin-dashboard"     element={<AdminDashboard />} />
 
-          {/* Role-specific dashboards */}
-          <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
-          <Route path="/ngo-dashboard"       element={<NgoDashboard />} />
-          <Route path="/admin-dashboard"     element={<AdminDashboard />} />
+            <Route path="/profile"              element={<Profile />} />
+            <Route path="/opportunities"        element={<Opportunities />} />
+            <Route path="/create-opportunity"   element={<CreateOpportunity />} />
+            <Route path="/opportunity/:id"      element={<OpportunityDetails />} />
+            <Route path="/edit-opportunity/:id" element={<EditOpportunity />} />
 
-          {/* Profile & Opportunities */}
-          <Route path="/profile"              element={<Profile />} />
-          <Route path="/opportunities"        element={<Opportunities />} />
-          <Route path="/create-opportunity"   element={<CreateOpportunity />} />
-          <Route path="/opportunity/:id"      element={<OpportunityDetails />} />
-          <Route path="/edit-opportunity/:id" element={<EditOpportunity />} />
+            <Route path="/users"           element={<UsersPage />} />
+            <Route path="/reports"         element={<Reports />} />
+            <Route path="/moderation"      element={<Moderation />} />
+            <Route path="/platform-health" element={<PlatformControl />} />
+            <Route path="/admin/support"   element={<AdminSupport />} />
 
-          {/* Admin */}
-          <Route path="/users"           element={<UsersPage />} />
-          <Route path="/reports"         element={<Reports />} />
-          <Route path="/moderation"      element={<Moderation />} />
-          <Route path="/platform-health" element={<PlatformControl />} />
-          <Route path="/admin/support" element={<AdminSupport />} />
+            <Route path="/schedule"        element={<SchedulePickup />} />
+            <Route path="/impact"          element={<WasteStatistics />} />
 
-          {/* Volunteer */}
-          <Route path="/schedule"        element={<SchedulePickup />} />
-          <Route path="/impact"          element={<WasteStatistics />} />
+            <Route path="/manage-pickups"  element={<ManagePickups />} />
+            <Route path="/applications"    element={<Applications />} />
 
-          {/* NGO */}
-          <Route path="/manage-pickups"  element={<ManagePickups />} />   {/* ← added */}
-          <Route path="/applications"    element={<Applications />} />
-
-          {/* Shared */}
-          <Route path="/messages"  element={<Messages />} />
-          <Route path="/settings"  element={<Settings />} />
-          <Route path="/support"   element={<Support />} />
-        </Routes>
+            <Route path="/messages"  element={<Messages />} />
+            <Route path="/settings"  element={<Settings />} />
+            <Route path="/support"   element={<Support />} />
+          </Routes>
+        </RouteLoader>
       </BrowserRouter>
     </SocketProvider>
   );
