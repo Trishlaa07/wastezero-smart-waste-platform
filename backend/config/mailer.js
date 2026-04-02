@@ -1,33 +1,36 @@
 require("dotenv").config();
+const axios = require("axios");
 
-// ✅ Brevo HTTP API — uses port 443, never blocked by Render free tier
-const Brevo = require("@getbrevo/brevo");
-
-const apiInstance = new Brevo.TransactionalEmailsApi();
-apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
-
+// ✅ Brevo REST API — HTTPS port 443, never blocked by Render
+// ✅ 10s timeout so failures are fast, not hanging
 const transporter = {
 
-  /* Drop-in replacement for nodemailer transporter.sendMail()
-     Accepts the same { from, to, subject, html } options */
   sendMail: async ({ from, to, subject, html }) => {
-    const email = new Brevo.SendSmtpEmail();
-
-    email.sender       = { name: "WasteZero Team", email: process.env.EMAIL_USER };
-    email.to           = [{ email: to }];
-    email.subject      = subject;
-    email.htmlContent  = html;
-
-    return apiInstance.sendTransacEmail(email);
+    await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender:      { name: "WasteZero Team", email: process.env.EMAIL_USER },
+        to:          [{ email: to }],
+        subject,
+        htmlContent: html,
+      },
+      {
+        headers: {
+          "api-key":      process.env.BREVO_API_KEY,
+          "Content-Type": "application/json",
+          "Accept":       "application/json",
+        },
+        timeout: 10000, // ✅ fail fast after 10s instead of hanging forever
+      }
+    );
   },
 
-  // Called on server start to confirm config is valid
   verify: (cb) => {
     if (process.env.BREVO_API_KEY) {
-      console.log("✅ Mail server is ready (Brevo API)");
+      console.log("✅ Mail server is ready (Brevo REST API)");
       cb(null, true);
     } else {
-      const err = new Error("BREVO_API_KEY is not set in environment");
+      const err = new Error("BREVO_API_KEY is not set");
       console.log("❌ MAIL CONFIG ERROR:", err.message);
       cb(err);
     }
